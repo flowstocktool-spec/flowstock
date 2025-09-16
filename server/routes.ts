@@ -25,45 +25,6 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint
-  app.get('/api/health', async (req, res) => {
-    try {
-      // Test database connection
-      const testUser = await storage.getUser('non-existent-id');
-      res.json({ 
-        status: 'healthy', 
-        database: 'connected',
-        email: emailService.isEmailConfigured() ? 'configured' : 'not_configured',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(503).json({ 
-        status: 'unhealthy', 
-        database: 'disconnected',
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // Database status endpoint
-  app.get('/api/db-status', async (req, res) => {
-    try {
-      const users = await storage.getUser('test');
-      res.json({ 
-        status: 'connected',
-        message: 'Database is accessible',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(503).json({ 
-        status: 'error',
-        message: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
   // User routes
   app.post('/api/users', async (req, res) => {
     try {
@@ -157,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'userId is required' });
       }
       const products = await storage.getProductsByUserId(userId);
-      
+
       // Enrich products with supplier information
       const enrichedProducts = await Promise.all(
         products.map(async (product) => {
@@ -169,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedProducts);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch products' });
@@ -261,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               // Get supplier and user information
               const supplier = await storage.getSupplier(product.supplierId);
-              const user = await storage.getUser(userId);
+              const user = await storage.getUser(req.userId!); // Fixed reference here
 
               if (supplier && user) {
                 // Send email alert
@@ -329,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'userId is required' });
       }
       const alerts = await storage.getAlertsByUserId(userId);
-      
+
       // Enrich alerts with product and supplier information
       const enrichedAlerts = await Promise.all(
         alerts.map(async (alert) => {
@@ -344,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedAlerts);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch alerts' });
@@ -370,25 +331,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test email endpoint
-  app.post('/api/email/test', async (req, res) => {
-    try {
-      const { toEmail, fromEmail } = req.body;
-      if (!toEmail || !fromEmail) {
-        return res.status(400).json({ error: 'toEmail and fromEmail are required' });
-      }
-
-      const sent = await emailService.sendTestEmail(toEmail, fromEmail);
-      if (sent) {
-        res.json({ success: true, message: 'Test email sent successfully' });
-      } else {
-        res.status(400).json({ error: 'Failed to send test email' });
-      }
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to send test email' });
-    }
-  });
-
   // Dashboard stats
   app.get('/api/dashboard/stats', async (req, res) => {
     try {
@@ -403,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const lowStockItems = products.filter(p => p.currentStock <= p.minimumQuantity && p.currentStock > 0);
       const outOfStockItems = products.filter(p => p.currentStock === 0);
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayAlerts = alerts.filter(a => a.sentAt && a.sentAt >= today);
