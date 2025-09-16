@@ -4,12 +4,13 @@ import { Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductTable from "@/components/ProductTable";
 import ProductForm from "@/components/ProductForm";
+import { Mail } from "lucide-react";
 
 export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const queryClient = useQueryClient();
-  
+
   // Mock user ID - in real app this would come from auth
   const userId = "test-user-1";
 
@@ -76,6 +77,37 @@ export default function ProductsPage() {
     },
     onError: (error) => {
       console.error('Error updating product:', error);
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete product');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+    },
+  });
+
+  const testAlertMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await fetch(`/api/test-alert/${productId}`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send test alert');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      alert('✅ ' + data.message);
+    },
+    onError: (error) => {
+      alert('❌ ' + error.message);
     },
   });
 
