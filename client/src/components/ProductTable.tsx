@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import StockBadge from "./StockBadge";
 
@@ -57,6 +57,49 @@ export default function ProductTable({ onEdit }: ProductTableProps) {
     },
   });
 
+  const testAlert = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await fetch(`/api/test-alert/${productId}`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send test alert');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      alert('✅ ' + data.message);
+    },
+    onError: (error) => {
+      alert('❌ ' + error.message);
+    },
+  });
+
+  const triggerLowStock = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentStock: 1, // Set stock to 1 to trigger low stock alert
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to update product');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      alert('🚨 Stock updated to 1 - automatic email should be sent if configured!');
+    },
+    onError: (error) => {
+      alert('❌ Failed to trigger low stock: ' + error.message);
+    },
+  });
+
+
   const handleEdit = (product: Product) => {
     console.log('Edit product triggered:', product);
     onEdit?.(product);
@@ -109,21 +152,39 @@ export default function ProductTable({ onEdit }: ProductTableProps) {
                   <td className="p-2 text-sm text-muted-foreground">{product.lastUpdated}</td>
                   <td className="p-2">
                     <div className="flex gap-2">
-                      <Button 
-                        size="icon" 
+                      <Button
+                        size="icon"
                         variant="outline"
                         onClick={() => handleEdit(product)}
                         data-testid={`button-edit-product-${product.id}`}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        size="icon" 
+                      <Button
+                        size="icon"
                         variant="outline"
                         onClick={() => handleDelete(product.id)}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => testAlert.mutate(product.id)}
+                        disabled={testAlert.isPending}
+                        title="Test Alert Email"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => triggerLowStock.mutate(product.id)}
+                        disabled={triggerLowStock.isPending}
+                        title="Trigger Low Stock (Set stock to 1)"
+                      >
+                        ⚠️
                       </Button>
                     </div>
                   </td>

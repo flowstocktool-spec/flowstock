@@ -168,9 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if stock alert should be sent
-      console.log(`Product updated: ${product.name} (${product.sku})`);
+      console.log(`\n🔍 PRODUCT UPDATE DEBUG:`);
+      console.log(`Product: ${product.name} (${product.sku})`);
       console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
-      console.log(`Email configured: ${emailService.isEmailConfigured()}`);
+      console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
+      console.log(`Should send alert: ${product.currentStock <= product.minimumQuantity}`);
       
       if (product.currentStock <= product.minimumQuantity) {
         console.log(`Low stock detected for ${product.name}`);
