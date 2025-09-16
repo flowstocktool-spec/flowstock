@@ -4,25 +4,137 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Mail, User, Key, Save } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, User, Key, Save, TestTube, CheckCircle, AlertTriangle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
     username: 'john_seller',
     email: 'john@example.com',
-    senderEmail: 'alerts@mystore.com',
+    senderEmail: 'mithuan137@gmail.com',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
+  const [emailConfig, setEmailConfig] = useState({
+    gmailUsername: '',
+    gmailAppPassword: '',
+    testEmail: '',
+  });
+
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | null, message: string }>({
+    type: null,
+    message: '',
+  });
+
+  const configureMutation = useMutation({
+    mutationFn: async (config: { username: string; password: string }) => {
+      const response = await fetch('/api/email/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to configure email');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setFeedback({ type: 'success', message: 'Email configuration successful! Gmail SMTP is now configured.' });
+    },
+    onError: (error) => {
+      setFeedback({ type: 'error', message: error.message });
+    },
+  });
+
+  const testEmailMutation = useMutation({
+    mutationFn: async (data: { toEmail: string; fromEmail: string }) => {
+      const response = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send test email');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setFeedback({ type: 'success', message: 'Test email sent successfully! Check your inbox.' });
+    },
+    onError: (error) => {
+      setFeedback({ type: 'error', message: error.message });
+    },
+  });
+
+  const saveUserMutation = useMutation({
+    mutationFn: async (userData: { username: string; email: string; senderEmail: string }) => {
+      const userId = 'test-user-1'; // Mock user ID
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save user settings');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setFeedback({ type: 'success', message: 'Profile settings saved successfully!' });
+    },
+    onError: (error) => {
+      setFeedback({ type: 'error', message: error.message });
+    },
+  });
+
   const handleSave = (section: string) => {
-    console.log(`Save ${section} settings triggered:`, settings);
+    if (section === 'profile') {
+      saveUserMutation.mutate({
+        username: settings.username,
+        email: settings.email,
+        senderEmail: settings.senderEmail,
+      });
+    } else {
+      console.log(`Save ${section} settings triggered:`, settings);
+      setFeedback({ type: 'success', message: `${section} settings saved successfully!` });
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEmailConfigChange = (field: string, value: string) => {
+    setEmailConfig(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEmailConfigure = () => {
+    if (!emailConfig.gmailUsername || !emailConfig.gmailAppPassword) {
+      setFeedback({ type: 'error', message: 'Please enter both Gmail username and App Password' });
+      return;
+    }
+    configureMutation.mutate({
+      username: emailConfig.gmailUsername,
+      password: emailConfig.gmailAppPassword,
+    });
+  };
+
+  const handleTestEmail = () => {
+    if (!emailConfig.testEmail || !settings.senderEmail) {
+      setFeedback({ type: 'error', message: 'Please enter test email address and configure sender email' });
+      return;
+    }
+    testEmailMutation.mutate({
+      toEmail: emailConfig.testEmail,
+      fromEmail: settings.senderEmail,
+    });
   };
 
   return (
@@ -33,6 +145,17 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6 max-w-2xl">
+        {feedback.type && (
+          <Alert variant={feedback.type === 'error' ? 'destructive' : 'default'}>
+            {feedback.type === 'success' ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <AlertTriangle className="h-4 w-4" />
+            )}
+            <AlertDescription>{feedback.message}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Profile Settings */}
         <Card data-testid="card-profile-settings">
           <CardHeader>
@@ -73,12 +196,12 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Email Settings */}
+        {/* Email Configuration */}
         <Card data-testid="card-email-settings">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              Email Settings
+              Email Configuration
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -97,13 +220,81 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <Button 
-              onClick={() => handleSave('email')}
-              data-testid="button-save-email"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Email Settings
-            </Button>
+            <Separator />
+            
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Gmail SMTP Configuration</h4>
+              <p className="text-sm text-muted-foreground">
+                Configure Gmail SMTP to send emails. You need to enable 2-factor authentication and generate an App Password.
+              </p>
+              
+              <div className="space-y-2">
+                <Label htmlFor="gmailUsername">Gmail Username</Label>
+                <Input
+                  id="gmailUsername"
+                  type="email"
+                  placeholder="your-email@gmail.com"
+                  value={emailConfig.gmailUsername}
+                  onChange={(e) => handleEmailConfigChange('gmailUsername', e.target.value)}
+                  data-testid="input-gmail-username"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gmailAppPassword">Gmail App Password</Label>
+                <Input
+                  id="gmailAppPassword"
+                  type="password"
+                  placeholder="16-character App Password"
+                  value={emailConfig.gmailAppPassword}
+                  onChange={(e) => handleEmailConfigChange('gmailAppPassword', e.target.value)}
+                  data-testid="input-gmail-app-password"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Generate this from Google Account → Security → 2-Step Verification → App passwords
+                </p>
+              </div>
+
+              <Button 
+                onClick={handleEmailConfigure}
+                disabled={configureMutation.isPending}
+                data-testid="button-configure-email"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {configureMutation.isPending ? 'Configuring...' : 'Configure Email'}
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Test Email</h4>
+              <p className="text-sm text-muted-foreground">
+                Send a test email to verify your configuration is working
+              </p>
+              
+              <div className="space-y-2">
+                <Label htmlFor="testEmail">Test Email Address</Label>
+                <Input
+                  id="testEmail"
+                  type="email"
+                  placeholder="test@example.com"
+                  value={emailConfig.testEmail}
+                  onChange={(e) => handleEmailConfigChange('testEmail', e.target.value)}
+                  data-testid="input-test-email"
+                />
+              </div>
+
+              <Button 
+                onClick={handleTestEmail}
+                disabled={testEmailMutation.isPending}
+                variant="outline"
+                data-testid="button-test-email"
+              >
+                <TestTube className="mr-2 h-4 w-4" />
+                {testEmailMutation.isPending ? 'Sending...' : 'Send Test Email'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

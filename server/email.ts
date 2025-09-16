@@ -13,7 +13,7 @@ class EmailService {
 
   async configure(config: EmailConfig): Promise<boolean> {
     try {
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
           user: config.username,
@@ -22,7 +22,7 @@ class EmailService {
       });
 
       // Verify the connection
-      await this.transporter.verify();
+      await this.transporter!.verify();
       this.isConfigured = true;
       console.log("Email service configured successfully");
       return true;

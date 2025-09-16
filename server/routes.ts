@@ -317,22 +317,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email configuration
+  // Save user settings (including sender email)
+  app.put('/api/users/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { username, email, senderEmail } = req.body;
+      
+      // Mock implementation - in real app, update user in database
+      console.log(`Updating user ${id}:`, { username, email, senderEmail });
+      
+      res.json({ 
+        success: true, 
+        message: 'User settings updated successfully',
+        user: { id, username, email, senderEmail }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update user settings' });
+    }
+  });
+
+  // Email configuration (simplified, per-user)
   app.post('/api/email/configure', async (req, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password are required' });
+        return res.status(400).json({ error: 'Gmail username and App Password are required' });
       }
 
       const configured = await emailService.configure({ username, password });
       if (configured) {
-        res.json({ success: true, message: 'Email service configured successfully' });
+        res.json({ success: true, message: 'Gmail SMTP configured successfully' });
       } else {
-        res.status(400).json({ error: 'Failed to configure email service' });
+        res.status(400).json({ error: 'Failed to configure Gmail SMTP. Please check your credentials.' });
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to configure email service' });
+    }
+  });
+
+  // Test email endpoint
+  app.post('/api/email/test', async (req, res) => {
+    try {
+      const { toEmail, fromEmail } = req.body;
+      if (!toEmail || !fromEmail) {
+        return res.status(400).json({ error: 'Both toEmail and fromEmail are required' });
+      }
+
+      const sent = await emailService.sendTestEmail(toEmail, fromEmail);
+      if (sent) {
+        res.json({ success: true, message: 'Test email sent successfully' });
+      } else {
+        res.status(400).json({ error: 'Failed to send test email. Please check your email configuration.' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to send test email' });
     }
   });
 
