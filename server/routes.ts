@@ -166,6 +166,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!product) {
         return res.status(404).json({ error: 'Product not found' });
       }
+
+      // Check if stock alert should be sent
+      if (product.currentStock <= product.minimumQuantity && emailService.isEmailConfigured()) {
+        try {
+          // Get supplier and user information
+          const supplier = await storage.getSupplier(product.supplierId);
+          const user = await storage.getUser(product.userId);
+
+          if (supplier && user && supplier.email && user.senderEmail) {
+            // Send email alert
+            const emailSent = await emailService.sendLowStockAlert(
+              product.name,
+              product.sku,
+              product.currentStock,
+              product.minimumQuantity,
+              supplier.email,
+              user.senderEmail
+            );
+
+            if (emailSent) {
+              // Create alert record
+              await storage.createAlert(product.id, supplier.id, product.userId);
+              console.log(`Low stock alert sent for product: ${product.name} to ${supplier.email}`);
+            } else {
+              console.log(`Failed to send alert for product: ${product.name}`);
+            }
+          }
+        } catch (alertError) {
+          console.error('Error sending low stock alert:', alertError);
+        }
+      }
+
       res.json(product);
     } catch (error) {
       res.status(500).json({ error: 'Failed to update product' });
