@@ -8,7 +8,7 @@ import {
   type Alert,
   users, suppliers, products, stockReports, alerts
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -16,6 +16,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | null>;
+  getUserById(id: string): Promise<User | null>;
 
   // Supplier methods
   getSupplier(id: string): Promise<Supplier | undefined>;
@@ -32,6 +34,10 @@ export interface IStorage {
   updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
   updateProductStock(id: string, currentStock: number): Promise<Product | undefined>;
+  updateProductStock(userId: string, sku: string, stock: number, name?: string): Promise<void>;
+  batchUpdateProductStock(userId: string, updates: Array<{sku: string, stock: number, name?: string}>): Promise<number>;
+  getProductBySku(userId: string, sku: string): Promise<Product | undefined>;
+
 
   // Stock report methods
   createStockReport(report: InsertStockReport): Promise<StockReport>;
@@ -75,6 +81,27 @@ class PostgresStorage implements IStorage {
     const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
     return result[0];
   }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error fetching user by email:', error);
+      return null;
+    }
+  }
+
+  async getUserById(id: string): Promise<User | null> {
+    try {
+      const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error fetching user by ID:', error);
+      return null;
+    }
+  }
+
 
   // Supplier methods
   async getSupplier(id: string): Promise<Supplier | undefined> {
@@ -142,6 +169,63 @@ class PostgresStorage implements IStorage {
       currentStock,
       lastUpdated: new Date()
     }).where(eq(products.id, id)).returning();
+    return result[0];
+  }
+
+  async updateProductStock(userId: string, sku: string, stock: number, name?: string): Promise<void> {
+    try {
+      // Use upsert for better performance
+      await this.db.insert(products).values({
+        userId,
+        sku,
+        name: name || sku,
+        stock,
+      }).onConflictDoUpdate({
+        target: [products.userId, products.sku],
+        set: {
+          stock: sql`excluded.stock`,
+          name: sql`COALESCE(excluded.name, ${products.name})`,
+          updatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      console.error('Error updating product stock:', error);
+      throw new Error('Failed to update product stock');
+    }
+  }
+
+  async batchUpdateProductStock(userId: string, updates: Array<{sku: string, stock: number, name?: string}>): Promise<number> {
+    try {
+      let count = 0;
+      // Process in batches of 100 for better performance
+      for (let i = 0; i < updates.length; i += 100) {
+        const batch = updates.slice(i, i + 100);
+        const values = batch.map(update => ({
+          userId,
+          sku: update.sku,
+          name: update.name || update.sku,
+          stock: update.stock,
+        }));
+
+        await this.db.insert(products).values(values).onConflictDoUpdate({
+          target: [products.userId, products.sku],
+          set: {
+            stock: sql`excluded.stock`,
+            name: sql`COALESCE(excluded.name, ${products.name})`,
+            updatedAt: new Date()
+          }
+        });
+        count += batch.length;
+      }
+      return count;
+    } catch (error) {
+      console.error('Error batch updating products:', error);
+      throw new Error('Failed to batch update products');
+    }
+  }
+
+  async getProductBySku(userId: string, sku: string): Promise<Product | undefined> {
+    const result = await this.db.select().from(products).where(and(eq(products.userId, userId), eq(products.sku, sku))).limit(1);
     return result[0];
   }
 

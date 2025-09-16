@@ -1,34 +1,41 @@
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import fs from "fs";
-import path from "path";
+// Use Replit's built-in PostgreSQL connection
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/replit';
+
+const sql = postgres(connectionString, { 
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  prepare: false
+});
+
+export const db = drizzle(sql);
 
 export async function initializeDatabase() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required");
-  }
-
-  const client = postgres(process.env.DATABASE_URL);
-  const db = drizzle(client);
-
   try {
-    // Check if tables exist by trying to query users table
-    await client`SELECT 1 FROM users LIMIT 1`;
-    console.log("Database tables already exist");
-  } catch (error) {
-    console.log("Database tables don't exist, running migrations...");
-    
-    // Read and execute migration
-    const migrationPath = path.join(process.cwd(), 'migrations', '0001_initial.sql');
-    if (fs.existsSync(migrationPath)) {
-      const migration = fs.readFileSync(migrationPath, 'utf-8');
-      await client.unsafe(migration);
-      console.log("Database initialized successfully");
-    } else {
-      console.error("Migration file not found");
-    }
-  }
+    console.log('Initializing database...');
 
-  await client.end();
+    // Check if tables exist first
+    const result = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `;
+
+    if (!result[0].exists) {
+      console.log('Running database migrations...');
+      await migrate(db, { migrationsFolder: 'migrations' });
+      console.log('Database migrations completed');
+    } else {
+      console.log('Database tables already exist');
+    }
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    // Don't throw error, continue with app startup
+  }
 }

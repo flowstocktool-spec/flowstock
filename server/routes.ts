@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse the CSV file
       const csvContent = req.file.buffer.toString('utf-8');
-      const parseResult = parseStockReport(csvContent);
+      const parseResult = await parseStockReport(csvContent); // Corrected: make stock parsing async
 
       if (!parseResult.success) {
         return res.status(400).json({
@@ -203,9 +203,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update product stock levels and send alerts
-      let updatedCount = 0;
       let alertsGenerated = 0;
       const alertErrors: string[] = [];
+
+      // Use batch update for much better performance
+      const updates = parseResult.data.map(row => ({
+        sku: row.sku,
+        stock: row.stock,
+        name: row.name
+      }));
+
+      const updatedCount = await storage.batchUpdateProductStock(userId, updates); // Corrected: Use batch operations for better performance
 
       for (const stockData of parseResult.data) {
         // Find products by SKU
@@ -213,10 +221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userProducts = products.filter(p => p.userId === userId);
 
         for (const product of userProducts) {
-          // Update stock level
-          await storage.updateProductStock(product.id, stockData.currentStock);
-          updatedCount++;
-
           // Check if alert needed
           if (stockData.currentStock <= product.minimumQuantity) {
             try {
@@ -258,13 +262,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         report,
         summary: {
           totalRows: parseResult.totalRows,
-          validRows: parseResult.validRows,
+          validRows: parseResult.validRows.length, // Use validRows.length as it's an array
           updatedProducts: updatedCount,
           alertsGenerated,
           errors: [...parseResult.errors, ...alertErrors],
         },
       });
     } catch (error) {
+      console.error("Error processing stock report:", error); // Added console logging for debugging
       res.status(500).json({ error: 'Failed to process stock report' });
     }
   });

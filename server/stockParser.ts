@@ -1,4 +1,3 @@
-
 interface StockData {
   sku: string;
   currentStock: number;
@@ -23,7 +22,7 @@ export function parseStockReport(csvContent: string): ParseResult {
 
   try {
     const lines = csvContent.trim().split('\n');
-    
+
     if (lines.length === 0) {
       result.errors.push("CSV file is empty");
       return result;
@@ -33,10 +32,10 @@ export function parseStockReport(csvContent: string): ParseResult {
 
     // Parse header to find column indices
     const header = lines[0].toLowerCase().split(',').map(col => col.trim());
-    const skuIndex = header.findIndex(col => 
+    const skuIndex = header.findIndex(col =>
       col.includes('sku') || col.includes('product_code') || col.includes('code')
     );
-    const stockIndex = header.findIndex(col => 
+    const stockIndex = header.findIndex(col =>
       col.includes('stock') || col.includes('quantity') || col.includes('qty')
     );
 
@@ -56,7 +55,7 @@ export function parseStockReport(csvContent: string): ParseResult {
       if (!line) continue; // Skip empty lines
 
       const columns = line.split(',').map(col => col.trim());
-      
+
       if (columns.length <= Math.max(skuIndex, stockIndex)) {
         result.errors.push(`Row ${i + 1}: Insufficient columns`);
         continue;
@@ -98,7 +97,7 @@ export function parseStockReport(csvContent: string): ParseResult {
 export function validateStockReportFormat(csvContent: string): { valid: boolean; message: string } {
   try {
     const lines = csvContent.trim().split('\n');
-    
+
     if (lines.length === 0) {
       return { valid: false, message: "File is empty" };
     }
@@ -108,32 +107,32 @@ export function validateStockReportFormat(csvContent: string): { valid: boolean;
     }
 
     const header = lines[0].toLowerCase().split(',').map(col => col.trim());
-    const hasSku = header.some(col => 
+    const hasSku = header.some(col =>
       col.includes('sku') || col.includes('product_code') || col.includes('code')
     );
-    const hasStock = header.some(col => 
+    const hasStock = header.some(col =>
       col.includes('stock') || col.includes('quantity') || col.includes('qty')
     );
 
     if (!hasSku) {
-      return { 
-        valid: false, 
-        message: "Missing SKU column. Please include a column named 'sku', 'product_code', or 'code'" 
+      return {
+        valid: false,
+        message: "Missing SKU column. Please include a column named 'sku', 'product_code', or 'code'"
       };
     }
 
     if (!hasStock) {
-      return { 
-        valid: false, 
-        message: "Missing stock column. Please include a column named 'stock', 'quantity', or 'qty'" 
+      return {
+        valid: false,
+        message: "Missing stock column. Please include a column named 'stock', 'quantity', or 'qty'"
       };
     }
 
     return { valid: true, message: "Format is valid" };
   } catch (error) {
-    return { 
-      valid: false, 
-      message: `Format validation error: ${error instanceof Error ? error.message : String(error)}` 
+    return {
+      valid: false,
+      message: `Format validation error: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }
