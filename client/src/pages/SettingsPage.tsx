@@ -74,7 +74,7 @@ export default function SettingsPage() {
 
   const saveUserMutation = useMutation({
     mutationFn: async (userData: { username: string; email: string; senderEmail: string }) => {
-      const userId = 'test-user-1'; // Mock user ID
+      const userId = 'test-user-1'; // TODO: Replace with actual user ID from auth context
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

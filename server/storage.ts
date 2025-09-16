@@ -145,11 +145,18 @@ class PostgresStorage implements IStorage {
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    // Ensure supplierId is provided
+    if (!insertProduct.supplierId) {
+      throw new Error('Product must be assigned to a supplier');
+    }
+    
     const result = await this.db.insert(products).values({
       ...insertProduct,
       minimumQuantity: insertProduct.minimumQuantity || 10,
       currentStock: insertProduct.currentStock || 0,
     }).returning();
+    
+    console.log(`✅ Product created: ${result[0].name} assigned to supplier: ${result[0].supplierId}`);
     return result[0];
   }
 

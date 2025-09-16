@@ -386,21 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save user settings (including sender email)
+  // Save user settings (including sender email) - this replaces the duplicate route above
   app.put('/api/users/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, email, senderEmail } = req.body;
+      const updates = req.body;
       
-      // Mock implementation - in real app, update user in database
-      console.log(`Updating user ${id}:`, { username, email, senderEmail });
+      // Actually update the user in the database
+      const user = await storage.updateUser(id, updates);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
       
-      res.json({ 
-        success: true, 
-        message: 'User settings updated successfully',
-        user: { id, username, email, senderEmail }
-      });
+      console.log(`✅ User ${id} updated:`, { username: user.username, email: user.email, senderEmail: user.senderEmail });
+      res.json(user);
     } catch (error) {
+      console.error('Failed to update user:', error);
       res.status(500).json({ error: 'Failed to update user settings' });
     }
   });
@@ -440,6 +441,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to send test email' });
+    }
+  });
+
+  // Test low stock alert endpoint
+  app.post('/api/test-alert/:productId', async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const product = await storage.getProduct(productId);
+      
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      console.log(`🧪 Testing alert for product: ${product.name}`);
+      console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
+      
+      if (!emailService.isEmailConfigured()) {
+        return res.status(400).json({ error: 'Email service not configured' });
+      }
+
+      const supplier = await storage.getSupplier(product.supplierId);
+      const user = await storage.getUser(product.userId);
+
+      if (!supplier || !user) {
+        return res.status(400).json({ error: 'Missing supplier or user information' });
+      }
+
+      if (!supplier.email || !user.senderEmail) {
+        return res.status(400).json({ 
+          error: 'Missing email addresses', 
+          details: { 
+            supplierEmail: supplier.email || 'Missing', 
+            userSenderEmail: user.senderEmail || 'Missing' 
+          }
+        });
+      }
+
+      const emailSent = await emailService.sendLowStockAlert(
+        product.name,
+        product.sku,
+        product.currentStock,
+        product.minimumQuantity,
+        supplier.email,
+        user.senderEmail
+      );
+
+      if (emailSent) {
+        await storage.createAlert(product.id, supplier.id, product.userId);
+        res.json({ 
+          success: true, 
+          message: `Test alert sent for ${product.name} to ${supplier.email}` 
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to send test alert' });
+      }
+    } catch (error) {
+      console.error('Test alert error:', error);
+      res.status(500).json({ error: 'Failed to send test alert' });
     }
   });
 
