@@ -168,34 +168,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if stock alert should be sent
-      if (product.currentStock <= product.minimumQuantity && emailService.isEmailConfigured()) {
-        try {
-          // Get supplier and user information
-          const supplier = await storage.getSupplier(product.supplierId);
-          const user = await storage.getUser(product.userId);
+      console.log(`Product updated: ${product.name} (${product.sku})`);
+      console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
+      console.log(`Email configured: ${emailService.isEmailConfigured()}`);
+      
+      if (product.currentStock <= product.minimumQuantity) {
+        console.log(`Low stock detected for ${product.name}`);
+        
+        if (!emailService.isEmailConfigured()) {
+          console.log('Email service not configured - cannot send alerts');
+        } else {
+          try {
+            // Get supplier and user information
+            const supplier = await storage.getSupplier(product.supplierId);
+            const user = await storage.getUser(product.userId);
 
-          if (supplier && user && supplier.email && user.senderEmail) {
-            // Send email alert
-            const emailSent = await emailService.sendLowStockAlert(
-              product.name,
-              product.sku,
-              product.currentStock,
-              product.minimumQuantity,
-              supplier.email,
-              user.senderEmail
-            );
+            console.log(`Supplier found: ${supplier ? supplier.name : 'None'}`);
+            console.log(`User found: ${user ? user.username : 'None'}`);
+            console.log(`Supplier email: ${supplier?.email || 'None'}`);
+            console.log(`User sender email: ${user?.senderEmail || 'None'}`);
 
-            if (emailSent) {
-              // Create alert record
-              await storage.createAlert(product.id, supplier.id, product.userId);
-              console.log(`Low stock alert sent for product: ${product.name} to ${supplier.email}`);
+            if (supplier && user && supplier.email && user.senderEmail) {
+              console.log(`Attempting to send email to ${supplier.email}`);
+              
+              // Send email alert
+              const emailSent = await emailService.sendLowStockAlert(
+                product.name,
+                product.sku,
+                product.currentStock,
+                product.minimumQuantity,
+                supplier.email,
+                user.senderEmail
+              );
+
+              if (emailSent) {
+                // Create alert record
+                await storage.createAlert(product.id, supplier.id, product.userId);
+                console.log(`✅ Low stock alert sent for product: ${product.name} to ${supplier.email}`);
+              } else {
+                console.log(`❌ Failed to send alert for product: ${product.name}`);
+              }
             } else {
-              console.log(`Failed to send alert for product: ${product.name}`);
+              console.log('❌ Missing required information for sending alert:');
+              console.log(`  - Supplier: ${supplier ? 'Found' : 'Missing'}`);
+              console.log(`  - User: ${user ? 'Found' : 'Missing'}`);
+              console.log(`  - Supplier email: ${supplier?.email ? 'Present' : 'Missing'}`);
+              console.log(`  - User sender email: ${user?.senderEmail ? 'Present' : 'Missing'}`);
             }
+          } catch (alertError) {
+            console.error('❌ Error sending low stock alert:', alertError);
           }
-        } catch (alertError) {
-          console.error('Error sending low stock alert:', alertError);
         }
+      } else {
+        console.log('Stock level is above minimum threshold - no alert needed');
       }
 
       res.json(product);

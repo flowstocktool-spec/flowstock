@@ -41,8 +41,15 @@ class EmailService {
     supplierEmail: string,
     senderEmail: string
   ): Promise<boolean> {
+    console.log('📧 SendLowStockAlert called with:');
+    console.log(`  Product: ${productName} (${sku})`);
+    console.log(`  Stock: ${currentStock}/${minimumQuantity}`);
+    console.log(`  To: ${supplierEmail}`);
+    console.log(`  From: ${senderEmail}`);
+    console.log(`  Service configured: ${this.isConfigured}`);
+    
     if (!this.isConfigured || !this.transporter) {
-      console.error("Email service not configured");
+      console.error("❌ Email service not configured");
       return false;
     }
 
@@ -91,10 +98,10 @@ This is an automated alert from your Inventory Management System.
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log(`Low stock alert sent for ${productName} to ${supplierEmail}`);
+      console.log(`✅ Low stock alert sent for ${productName} to ${supplierEmail}`);
       return true;
     } catch (error) {
-      console.error("Failed to send low stock alert:", error);
+      console.error("❌ Failed to send low stock alert:", error);
       return false;
     }
   }
