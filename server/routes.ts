@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: row.name
       }));
 
-      const updatedCount = await storage.batchUpdateProductStock(userId, updates); // Corrected: Use batch operations for better performance
+      const updatedCount = await storage.batchUpdateProductStock(userId, updates);
 
       for (const stockData of parseResult.data) {
         // Find products by SKU
@@ -222,18 +222,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         for (const product of userProducts) {
           // Check if alert needed
-          if (stockData.currentStock <= product.minimumQuantity) {
+          if (stockData.stock <= product.minimumQuantity) {
             try {
               // Get supplier and user information
               const supplier = await storage.getSupplier(product.supplierId);
-              const user = await storage.getUser(req.userId!); // Fixed reference here
+              const user = await storage.getUser(userId);
 
               if (supplier && user) {
                 // Send email alert
                 const emailSent = await emailService.sendLowStockAlert(
                   product.name,
                   product.sku,
-                  stockData.currentStock,
+                  stockData.stock,
                   product.minimumQuantity,
                   supplier.email,
                   user.senderEmail
@@ -261,8 +261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         report,
         summary: {
-          totalRows: parseResult.totalRows,
-          validRows: parseResult.validRows.length, // Use validRows.length as it's an array
+          totalRows: parseResult.data.length,
+          validRows: parseResult.data.length,
           updatedProducts: updatedCount,
           alertsGenerated,
           errors: [...parseResult.errors, ...alertErrors],

@@ -174,20 +174,21 @@ class PostgresStorage implements IStorage {
 
   async updateProductStock(userId: string, sku: string, stock: number, name?: string): Promise<void> {
     try {
-      // Use upsert for better performance
       await this.db.insert(products).values({
-        userId,
-        sku,
-        name: name || sku,
-        stock,
-      }).onConflictDoUpdate({
-        target: [products.userId, products.sku],
-        set: {
-          stock: sql`excluded.stock`,
-          name: sql`COALESCE(excluded.name, ${products.name})`,
-          updatedAt: new Date()
-        }
-      });
+          userId,
+          sku,
+          name: name || sku,
+          currentStock: stock,
+          minimumQuantity: 10,
+          supplierId: '', // Will need to be set properly
+        }).onConflictDoUpdate({
+          target: [products.userId, products.sku],
+          set: {
+            currentStock: sql`excluded.current_stock`,
+            name: sql`COALESCE(excluded.name, ${products.name})`,
+            lastUpdated: new Date()
+          }
+        });
     } catch (error) {
       console.error('Error updating product stock:', error);
       throw new Error('Failed to update product stock');
@@ -204,15 +205,17 @@ class PostgresStorage implements IStorage {
           userId,
           sku: update.sku,
           name: update.name || update.sku,
-          stock: update.stock,
+          currentStock: update.stock,
+          minimumQuantity: 10,
+          supplierId: '', // Will need to be set properly
         }));
 
         await this.db.insert(products).values(values).onConflictDoUpdate({
           target: [products.userId, products.sku],
           set: {
-            stock: sql`excluded.stock`,
+            currentStock: sql`excluded.current_stock`,
             name: sql`COALESCE(excluded.name, ${products.name})`,
-            updatedAt: new Date()
+            lastUpdated: new Date()
           }
         });
         count += batch.length;
@@ -256,7 +259,7 @@ class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async getAlertsByUserId(userId: string): Promise<Alert[]> {
+  async getAlertsByUserId(userId: string): Promise<Alert[]>{
     return await this.db.select().from(alerts)
       .where(eq(alerts.userId, userId))
       .orderBy(alerts.sentAt);

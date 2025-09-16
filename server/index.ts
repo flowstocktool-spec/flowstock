@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./database";
+import { testDatabaseConnection } from "./db-test";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +41,12 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize database
   await initializeDatabase();
+  
+  // Test database connection
+  const dbConnected = await testDatabaseConnection();
+  if (!dbConnected) {
+    console.error('Failed to connect to database - application may not work correctly');
+  }
   
   const server = await registerRoutes(app);
 
