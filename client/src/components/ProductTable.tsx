@@ -10,11 +10,16 @@ interface Product {
   sku: string;
   currentStock: number;
   minimumQuantity: number;
+  supplierId: string;
   supplierName?: string;
   lastUpdated: string;
 }
 
-export default function ProductTable() {
+interface ProductTableProps {
+  onEdit?: (product: Product) => void;
+}
+
+export default function ProductTable({ onEdit }: ProductTableProps) {
   const queryClient = useQueryClient();
 
   // Mock user ID - in real app this would come from auth
@@ -54,6 +59,7 @@ export default function ProductTable() {
 
   const handleEdit = (product: Product) => {
     console.log('Edit product triggered:', product);
+    onEdit?.(product);
   };
 
   const handleDelete = (productId: string) => {

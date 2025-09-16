@@ -54,6 +54,9 @@ export default function ProductsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!editingProduct?.id) {
+        throw new Error('No product selected for editing');
+      }
       const response = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
