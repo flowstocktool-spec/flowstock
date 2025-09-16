@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Hash, AlertTriangle } from "lucide-react";
+
+interface Supplier {
+  id: string;
+  name: string;
+}
 
 interface ProductFormProps {
   product?: {
@@ -19,14 +24,27 @@ interface ProductFormProps {
   onCancel?: () => void;
 }
 
-// Mock suppliers - todo: remove mock functionality
-const mockSuppliers = [
-  { id: '1', name: 'TechCorp' },
-  { id: '2', name: 'AudioPlus' },
-  { id: '3', name: 'CaseMaster' },
-];
-
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  
+  // Mock user ID - in real app this would come from auth
+  const userId = "test-user-1";
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await fetch(`/api/suppliers?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSuppliers(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch suppliers:', error);
+    }
+  };
   const [formData, setFormData] = useState({
     name: product?.name || '',
     sku: product?.sku || '',
@@ -131,7 +149,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 <SelectValue placeholder="Select a supplier" />
               </SelectTrigger>
               <SelectContent>
-                {mockSuppliers.map((supplier) => (
+                {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.name}
                   </SelectItem>

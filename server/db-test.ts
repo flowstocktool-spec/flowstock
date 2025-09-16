@@ -1,27 +1,26 @@
-
 import { storage } from "./storage";
 
-export async function testDatabaseConnection() {
+export async function testDatabase() {
+  console.log("Testing database connection...");
+
   try {
-    console.log('Testing database connection...');
-    
-    // Test creating a user
+    // Test basic database operations
     const testUser = await storage.createUser({
-      username: `test_${Date.now()}`,
-      email: `test_${Date.now()}@example.com`,
-      senderEmail: 'test@gmail.com',
-      password: 'test123'
+      username: `test_user_${Date.now()}`,
+      email: `test${Date.now()}@example.com`,
+      senderEmail: `sender${Date.now()}@example.com`,
+      password: "test123",
     });
-    
-    console.log('✅ Database connection successful! Created test user:', testUser.id);
-    
-    // Clean up
-    const users = await storage.getUserById(testUser.id);
-    console.log('✅ Can read from database:', !!users);
-    
+
+    console.log("✅ Database connection successful! Created test user:", testUser.id);
+
+    // Test reading back
+    const retrievedUser = await storage.getUser(testUser.id);
+    console.log("✅ Can read from database:", !!retrievedUser);
+
     return true;
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error("❌ Database test failed:", error);
     return false;
   }
 }

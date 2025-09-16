@@ -1,28 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Mail, Edit, Trash2 } from "lucide-react";
 import SupplierForm from "@/components/SupplierForm";
 
-// Mock data - todo: remove mock functionality
-const mockSuppliers = [
-  { id: '1', name: 'TechCorp', email: 'orders@techcorp.com', productCount: 45 },
-  { id: '2', name: 'AudioPlus', email: 'supply@audioplus.com', productCount: 23 },
-  { id: '3', name: 'CaseMaster', email: 'business@casemaster.com', productCount: 12 },
-  { id: '4', name: 'GadgetWorld', email: 'wholesale@gadgetworld.com', productCount: 76 },
-];
+interface Supplier {
+  id: string;
+  name: string;
+  email: string;
+  productCount?: number;
+}
 
 export default function SuppliersPage() {
   const [showForm, setShowForm] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Mock user ID - in real app this would come from auth
+  const userId = "test-user-1";
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await fetch(`/api/suppliers?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSuppliers(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch suppliers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddSupplier = () => {
     console.log('Add supplier triggered');
     setShowForm(true);
   };
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = async (data: any) => {
     console.log('Supplier form submitted:', data);
-    setShowForm(false);
+    try {
+      const response = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          userId,
+        }),
+      });
+
+      if (response.ok) {
+        setShowForm(false);
+        fetchSuppliers(); // Refresh the list
+      } else {
+        console.error('Failed to create supplier');
+      }
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+    }
   };
 
   const handleFormCancel = () => {
@@ -33,12 +75,26 @@ export default function SuppliersPage() {
     console.log('Edit supplier triggered:', supplierId);
   };
 
-  const handleDelete = (supplierId: string) => {
+  const handleDelete = async (supplierId: string) => {
     console.log('Delete supplier triggered:', supplierId);
+    try {
+      const response = await fetch(`/api/suppliers/${supplierId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchSuppliers(); // Refresh the list
+      } else {
+        console.error('Failed to delete supplier');
+      }
+    } catch (error) {
+      console.error('Error deleting supplier:', error);
+    }
   };
 
   const handleEmail = (supplierEmail: string) => {
     console.log('Email supplier triggered:', supplierEmail);
+    window.location.href = `mailto:${supplierEmail}`;
   };
 
   return (
@@ -59,8 +115,11 @@ export default function SuppliersPage() {
           <SupplierForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockSuppliers.map((supplier) => (
+        {loading ? (
+          <div>Loading suppliers...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {suppliers.map((supplier) => (
             <Card key={supplier.id} className="hover-elevate" data-testid={`card-supplier-${supplier.id}`}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -97,13 +156,14 @@ export default function SuppliersPage() {
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">{supplier.email}</p>
                   <p className="text-sm">
-                    <span className="font-medium">{supplier.productCount}</span> products
+                    <span className="font-medium">{supplier.productCount || 0}</span> products
                   </p>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
       )}
     </div>
   );

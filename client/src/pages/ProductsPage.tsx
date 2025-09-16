@@ -12,9 +12,34 @@ export default function ProductsPage() {
     setShowForm(true);
   };
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = async (data: any) => {
     console.log('Product form submitted:', data);
-    setShowForm(false);
+    
+    // Mock user ID - in real app this would come from auth
+    const userId = "test-user-1";
+    
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          userId,
+        }),
+      });
+
+      if (response.ok) {
+        setShowForm(false);
+        // You might want to refresh the product table here
+        window.location.reload(); // Simple refresh for now
+      } else {
+        console.error('Failed to create product');
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+    }
   };
 
   const handleFormCancel = () => {
