@@ -7,6 +7,7 @@ import ProductForm from "@/components/ProductForm";
 
 export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const queryClient = useQueryClient();
   
   // Mock user ID - in real app this would come from auth
@@ -14,6 +15,13 @@ export default function ProductsPage() {
 
   const handleAddProduct = () => {
     console.log('Add product triggered');
+    setEditingProduct(null);
+    setShowForm(true);
+  };
+
+  const handleEditProduct = (product: any) => {
+    console.log('Edit product triggered:', product.id);
+    setEditingProduct(product);
     setShowForm(true);
   };
 
@@ -36,6 +44,7 @@ export default function ProductsPage() {
     },
     onSuccess: () => {
       setShowForm(false);
+      setEditingProduct(null);
       queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
     },
     onError: (error) => {
@@ -43,13 +52,42 @@ export default function ProductsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch(`/api/products/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update product');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowForm(false);
+      setEditingProduct(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+    },
+    onError: (error) => {
+      console.error('Error updating product:', error);
+    },
+  });
+
   const handleFormSubmit = (data: any) => {
     console.log('Product form submitted:', data);
-    createMutation.mutate(data);
+    if (editingProduct) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const handleFormCancel = () => {
     setShowForm(false);
+    setEditingProduct(null);
   };
 
   return (
@@ -67,10 +105,14 @@ export default function ProductsPage() {
 
       {showForm ? (
         <div className="mb-6">
-          <ProductForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
+          <ProductForm 
+            product={editingProduct} 
+            onSubmit={handleFormSubmit} 
+            onCancel={handleFormCancel} 
+          />
         </div>
       ) : (
-        <ProductTable />
+        <ProductTable onEdit={handleEditProduct} />
       )}
     </div>
   );

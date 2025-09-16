@@ -13,6 +13,7 @@ interface Supplier {
 
 export default function SuppliersPage() {
   const [showForm, setShowForm] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,40 +40,48 @@ export default function SuppliersPage() {
 
   const handleAddSupplier = () => {
     console.log('Add supplier triggered');
+    setEditingSupplier(null);
     setShowForm(true);
   };
 
   const handleFormSubmit = async (data: any) => {
     console.log('Supplier form submitted:', data);
     try {
-      const response = await fetch('/api/suppliers', {
-        method: 'POST',
+      const url = editingSupplier ? `/api/suppliers/${editingSupplier.id}` : '/api/suppliers';
+      const method = editingSupplier ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          userId,
-        }),
+        body: JSON.stringify(editingSupplier ? data : { ...data, userId }),
       });
 
       if (response.ok) {
         setShowForm(false);
+        setEditingSupplier(null);
         fetchSuppliers(); // Refresh the list
       } else {
-        console.error('Failed to create supplier');
+        console.error('Failed to save supplier');
       }
     } catch (error) {
-      console.error('Error creating supplier:', error);
+      console.error('Error saving supplier:', error);
     }
   };
 
   const handleFormCancel = () => {
     setShowForm(false);
+    setEditingSupplier(null);
   };
 
   const handleEdit = (supplierId: string) => {
     console.log('Edit supplier triggered:', supplierId);
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (supplier) {
+      setEditingSupplier(supplier);
+      setShowForm(true);
+    }
   };
 
   const handleDelete = async (supplierId: string) => {
@@ -112,7 +121,11 @@ export default function SuppliersPage() {
 
       {showForm ? (
         <div className="mb-6">
-          <SupplierForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
+          <SupplierForm 
+            supplier={editingSupplier} 
+            onSubmit={handleFormSubmit} 
+            onCancel={handleFormCancel} 
+          />
         </div>
       ) : (
         loading ? (

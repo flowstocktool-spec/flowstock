@@ -16,7 +16,7 @@ interface Product {
 
 export default function ProductTable() {
   const queryClient = useQueryClient();
-  
+
   // Mock user ID - in real app this would come from auth
   const userId = "test-user-1";
 
@@ -52,8 +52,8 @@ export default function ProductTable() {
     },
   });
 
-  const handleEdit = (productId: string) => {
-    console.log('Edit product triggered:', productId);
+  const handleEdit = (product: Product) => {
+    console.log('Edit product triggered:', product);
   };
 
   const handleDelete = (productId: string) => {
@@ -106,7 +106,8 @@ export default function ProductTable() {
                       <Button 
                         size="icon" 
                         variant="outline"
-                        onClick={() => handleEdit(product.id)}
+                        onClick={() => handleEdit(product)}
+                        data-testid={`button-edit-product-${product.id}`}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
