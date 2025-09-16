@@ -115,7 +115,7 @@ export default function SuppliersPage() {
           <SupplierForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
         </div>
       ) : (
-        {loading ? (
+        loading ? (
           <div>Loading suppliers...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -163,7 +163,7 @@ export default function SuppliersPage() {
             </Card>
           ))}
           </div>
-        )}
+        )
       )}
     </div>
   );
