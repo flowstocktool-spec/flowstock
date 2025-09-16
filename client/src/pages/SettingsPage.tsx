@@ -137,6 +137,31 @@ export default function SettingsPage() {
     });
   };
 
+  const handleDemoConfig = async () => {
+    try {
+      const response = await fetch('/api/email/configure-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to configure demo email');
+      }
+      
+      const result = await response.json();
+      setFeedback({ 
+        type: 'success', 
+        message: 'Demo email configured! You can now test alerts automatically.' 
+      });
+    } catch (error) {
+      setFeedback({ 
+        type: 'error', 
+        message: 'Demo setup failed. Please configure your own Gmail SMTP instead.' 
+      });
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -255,14 +280,26 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <Button 
-                onClick={handleEmailConfigure}
-                disabled={configureMutation.isPending}
-                data-testid="button-configure-email"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {configureMutation.isPending ? 'Configuring...' : 'Configure Email'}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleEmailConfigure}
+                  disabled={configureMutation.isPending}
+                  data-testid="button-configure-email"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {configureMutation.isPending ? 'Configuring...' : 'Configure Email'}
+                </Button>
+                
+                <Button 
+                  onClick={handleDemoConfig}
+                  disabled={configureMutation.isPending}
+                  variant="outline"
+                  data-testid="button-demo-config"
+                >
+                  <TestTube className="mr-2 h-4 w-4" />
+                  Demo Setup
+                </Button>
+              </div>
             </div>
 
             <Separator />
