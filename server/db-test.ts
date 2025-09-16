@@ -24,3 +24,7 @@ export async function testDatabase() {
     return false;
   }
 }
+
+export async function testDatabaseConnection() {
+  return testDatabase();
+}
