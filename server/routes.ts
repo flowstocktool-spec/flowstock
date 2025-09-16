@@ -69,7 +69,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'userId is required' });
       }
       const suppliers = await storage.getSuppliersByUserId(userId);
-      res.json(suppliers);
+      
+      // Enrich suppliers with product count
+      const enrichedSuppliers = await Promise.all(
+        suppliers.map(async (supplier) => {
+          const products = await storage.getProductsBySupplier(supplier.id);
+          return {
+            ...supplier,
+            productCount: products.length,
+          };
+        })
+      );
+      
+      res.json(enrichedSuppliers);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch suppliers' });
     }

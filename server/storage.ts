@@ -234,6 +234,10 @@ class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async getProductsBySupplier(supplierId: string): Promise<Product[]> {
+    return await this.db.select().from(products).where(eq(products.supplierId, supplierId));
+  }
+
   // Stock report methods
   async createStockReport(insertReport: InsertStockReport): Promise<StockReport> {
     const result = await this.db.insert(stockReports).values(insertReport).returning();
