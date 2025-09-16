@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductTable from "@/components/ProductTable";
 import ProductForm from "@/components/ProductForm";
 
 export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
+  const queryClient = useQueryClient();
+  
+  // Mock user ID - in real app this would come from auth
+  const userId = "test-user-1";
 
   const handleAddProduct = () => {
     console.log('Add product triggered');
     setShowForm(true);
   };
 
-  const handleFormSubmit = async (data: any) => {
-    console.log('Product form submitted:', data);
-    
-    // Mock user ID - in real app this would come from auth
-    const userId = "test-user-1";
-    
-    try {
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: {
@@ -29,17 +29,23 @@ export default function ProductsPage() {
           userId,
         }),
       });
-
-      if (response.ok) {
-        setShowForm(false);
-        // You might want to refresh the product table here
-        window.location.reload(); // Simple refresh for now
-      } else {
-        console.error('Failed to create product');
+      if (!response.ok) {
+        throw new Error('Failed to create product');
       }
-    } catch (error) {
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowForm(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+    },
+    onError: (error) => {
       console.error('Error creating product:', error);
-    }
+    },
+  });
+
+  const handleFormSubmit = (data: any) => {
+    console.log('Product form submitted:', data);
+    createMutation.mutate(data);
   };
 
   const handleFormCancel = () => {

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import StockBadge from "./StockBadge";
 
 interface Product {
@@ -15,52 +15,50 @@ interface Product {
 }
 
 export default function ProductTable() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  const queryClient = useQueryClient();
+  
   // Mock user ID - in real app this would come from auth
   const userId = "test-user-1";
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ["/api/products", userId],
+    queryFn: async () => {
       const response = await fetch(`/api/products?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data.map((product: any) => ({
-          ...product,
-          lastUpdated: new Date(product.lastUpdated).toLocaleDateString(),
-        })));
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
       }
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const data = await response.json();
+      return data.map((product: any) => ({
+        ...product,
+        lastUpdated: new Date(product.lastUpdated).toLocaleDateString(),
+      }));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+    },
+    onError: (error) => {
+      console.error('Error deleting product:', error);
+    },
+  });
 
   const handleEdit = (productId: string) => {
     console.log('Edit product triggered:', productId);
   };
 
-  const handleDelete = async (productId: string) => {
+  const handleDelete = (productId: string) => {
     console.log('Delete product triggered:', productId);
-    try {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        fetchProducts(); // Refresh the list
-      } else {
-        console.error('Failed to delete product');
-      }
-    } catch (error) {
-      console.error('Error deleting product:', error);
-    }
+    deleteMutation.mutate(productId);
   };
 
   if (loading) {
@@ -93,7 +91,7 @@ export default function ProductTable() {
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {products.map((product: Product) => (
                 <tr key={product.id} className="border-b hover-elevate">
                   <td className="p-2 font-medium">{product.name}</td>
                   <td className="p-2 font-mono text-sm">{product.sku}</td>
@@ -116,6 +114,7 @@ export default function ProductTable() {
                         size="icon" 
                         variant="outline"
                         onClick={() => handleDelete(product.id)}
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

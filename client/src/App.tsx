@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,25 +7,29 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
-import NotFound from "@/pages/not-found";
-import DashboardPage from "@/pages/DashboardPage";
-import ProductsPage from "@/pages/ProductsPage";
-import SuppliersPage from "@/pages/SuppliersPage";
-import UploadPage from "@/pages/UploadPage";
-import AlertsPage from "@/pages/AlertsPage";
-import SettingsPage from "@/pages/SettingsPage";
+
+// Lazy load all page components
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
+const SuppliersPage = lazy(() => import("@/pages/SuppliersPage"));
+const UploadPage = lazy(() => import("@/pages/UploadPage"));
+const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={DashboardPage} />
-      <Route path="/products" component={ProductsPage} />
-      <Route path="/suppliers" component={SuppliersPage} />
-      <Route path="/upload" component={UploadPage} />
-      <Route path="/alerts" component={AlertsPage} />
-      <Route path="/settings" component={SettingsPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<div className="p-6 text-center" data-testid="status-loading-app">Loading...</div>}>
+      <Switch>
+        <Route path="/" component={DashboardPage} />
+        <Route path="/products" component={ProductsPage} />
+        <Route path="/suppliers" component={SuppliersPage} />
+        <Route path="/upload" component={UploadPage} />
+        <Route path="/alerts" component={AlertsPage} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
