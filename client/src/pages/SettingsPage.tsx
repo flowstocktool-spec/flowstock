@@ -60,6 +60,7 @@ export default function SettingsPage() {
       });
       if (!response.ok) {
         const error = await response.json();
+        console.error('Test email error response:', error); // Log the detailed error
         throw new Error(error.error || 'Failed to send test email');
       }
       return response.json();
@@ -143,12 +144,12 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to configure demo email');
       }
-      
+
       const result = await response.json();
       setFeedback({ 
         type: 'success', 
@@ -246,13 +247,13 @@ export default function SettingsPage() {
             </div>
 
             <Separator />
-            
+
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Gmail SMTP Configuration</h4>
               <p className="text-sm text-muted-foreground">
                 Configure Gmail SMTP to send emails. You need to enable 2-factor authentication and generate an App Password.
               </p>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="gmailUsername">Gmail Username</Label>
                 <Input
@@ -289,7 +290,7 @@ export default function SettingsPage() {
                   <Save className="mr-2 h-4 w-4" />
                   {configureMutation.isPending ? 'Configuring...' : 'Configure Email'}
                 </Button>
-                
+
                 <Button 
                   onClick={handleDemoConfig}
                   disabled={configureMutation.isPending}
@@ -309,7 +310,7 @@ export default function SettingsPage() {
               <p className="text-sm text-muted-foreground">
                 Send a test email to verify your configuration is working
               </p>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="testEmail">Test Email Address</Label>
                 <Input

@@ -481,32 +481,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const product = await storage.getProduct(productId);
       
       if (!product) {
+        console.log(`❌ Product not found: ${productId}`);
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      console.log(`🧪 Testing alert for product: ${product.name}`);
+      console.log(`🧪 Testing alert for product: ${product.name} (${product.sku})`);
       console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
+      console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
       
       if (!emailService.isEmailConfigured()) {
-        return res.status(400).json({ error: 'Email service not configured' });
+        console.log('❌ Email service not configured - please configure Gmail SMTP first');
+        return res.status(400).json({ 
+          error: 'Email service not configured',
+          message: 'Please configure Gmail SMTP in Settings first'
+        });
       }
 
       const supplier = await storage.getSupplier(product.supplierId);
       const user = await storage.getUser(product.userId);
 
-      if (!supplier || !user) {
-        return res.status(400).json({ error: 'Missing supplier or user information' });
-      }
+      console.log(`Supplier found: ${supplier ? supplier.name : 'None'} (${supplier ? supplier.email : 'No email'})`);
+      console.log(`User found: ${user ? user.username : 'None'} (sender: ${user ? user.senderEmail : 'No sender email'})`);
 
-      if (!supplier.email || !user.senderEmail) {
+      if (!supplier) {
+        console.log('❌ No supplier assigned to this product');
         return res.status(400).json({ 
-          error: 'Missing email addresses', 
-          details: { 
-            supplierEmail: supplier.email || 'Missing', 
-            userSenderEmail: user.senderEmail || 'Missing' 
-          }
+          error: 'No supplier assigned',
+          message: 'Please assign a supplier to this product first'
         });
       }
+
+      if (!user) {
+        console.log('❌ User not found');
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      if (!supplier.email) {
+        console.log('❌ Supplier has no email address');
+        return res.status(400).json({ 
+          error: 'Supplier email missing',
+          message: `Please add an email address for supplier ${supplier.name}`
+        });
+      }
+
+      if (!user.senderEmail) {
+        console.log('❌ User has no sender email configured');
+        return res.status(400).json({ 
+          error: 'Sender email missing',
+          message: 'Please set a sender email address in Settings'
+        });
+      }
+
+      console.log(`✅ All checks passed - sending test alert to ${supplier.email}`);
 
       const emailSent = await emailService.sendLowStockAlert(
         product.name,
@@ -519,16 +545,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (emailSent) {
         await storage.createAlert(product.id, supplier.id, product.userId);
+        console.log(`✅ Test alert sent successfully to ${supplier.email}`);
         res.json({ 
           success: true, 
           message: `Test alert sent for ${product.name} to ${supplier.email}` 
         });
       } else {
-        res.status(500).json({ error: 'Failed to send test alert' });
+        console.log('❌ Failed to send email - check email configuration');
+        res.status(500).json({ 
+          error: 'Failed to send email',
+          message: 'Email sending failed - check your Gmail configuration'
+        });
       }
     } catch (error) {
-      console.error('Test alert error:', error);
-      res.status(500).json({ error: 'Failed to send test alert' });
+      console.error('❌ Test alert error:', error);
+      res.status(500).json({ 
+        error: 'Failed to send test alert',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
