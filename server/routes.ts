@@ -25,6 +25,45 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Test database connection
+      const testUser = await storage.getUser('non-existent-id');
+      res.json({ 
+        status: 'healthy', 
+        database: 'connected',
+        email: emailService.isEmailConfigured() ? 'configured' : 'not_configured',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(503).json({ 
+        status: 'unhealthy', 
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Database status endpoint
+  app.get('/api/db-status', async (req, res) => {
+    try {
+      const users = await storage.getUser('test');
+      res.json({ 
+        status: 'connected',
+        message: 'Database is accessible',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(503).json({ 
+        status: 'error',
+        message: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // User routes
   app.post('/api/users', async (req, res) => {
     try {
@@ -328,6 +367,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to configure email service' });
+    }
+  });
+
+  // Test email endpoint
+  app.post('/api/email/test', async (req, res) => {
+    try {
+      const { toEmail, fromEmail } = req.body;
+      if (!toEmail || !fromEmail) {
+        return res.status(400).json({ error: 'toEmail and fromEmail are required' });
+      }
+
+      const sent = await emailService.sendTestEmail(toEmail, fromEmail);
+      if (sent) {
+        res.json({ success: true, message: 'Test email sent successfully' });
+      } else {
+        res.status(400).json({ error: 'Failed to send test email' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to send test email' });
     }
   });
 

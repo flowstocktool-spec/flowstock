@@ -1,106 +1,136 @@
-import nodemailer from 'nodemailer';
+
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 interface EmailConfig {
   username: string;
   password: string;
 }
 
-interface EmailParams {
-  to: string;
-  from: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}
+class EmailService {
+  private transporter: Transporter | null = null;
+  private isConfigured = false;
 
-export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
-
-  async configure(config: EmailConfig) {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: config.username,
-        pass: config.password, // This should be an app password, not the regular password
-      },
-    });
-
-    // Verify the connection
+  async configure(config: EmailConfig): Promise<boolean> {
     try {
-      if (this.transporter) {
-        await this.transporter.verify();
-        console.log('Gmail SMTP connection verified successfully');
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Gmail SMTP verification failed:', error);
-      return false;
-    }
-  }
-
-  async sendEmail(params: EmailParams): Promise<boolean> {
-    if (!this.transporter) {
-      console.error('Email service not configured');
-      return false;
-    }
-
-    try {
-      const info = await this.transporter.sendMail({
-        from: params.from,
-        to: params.to,
-        subject: params.subject,
-        text: params.text,
-        html: params.html,
+      this.transporter = nodemailer.createTransporter({
+        service: "gmail",
+        auth: {
+          user: config.username,
+          pass: config.password, // This should be an app password, not regular password
+        },
       });
 
-      console.log('Email sent successfully:', info.messageId);
+      // Verify the connection
+      await this.transporter.verify();
+      this.isConfigured = true;
+      console.log("Email service configured successfully");
       return true;
     } catch (error) {
-      console.error('Failed to send email:', error);
+      console.error("Failed to configure email service:", error);
+      this.isConfigured = false;
       return false;
     }
   }
 
-  async sendLowStockAlert(productName: string, sku: string, currentStock: number, minimumQuantity: number, supplierEmail: string, senderEmail: string): Promise<boolean> {
-    const subject = `Low Stock Alert: ${productName} (${sku})`;
-    const text = `
-Dear Supplier,
+  async sendLowStockAlert(
+    productName: string,
+    sku: string,
+    currentStock: number,
+    minimumQuantity: number,
+    supplierEmail: string,
+    senderEmail: string
+  ): Promise<boolean> {
+    if (!this.isConfigured || !this.transporter) {
+      console.error("Email service not configured");
+      return false;
+    }
 
-This is an automated notification that the following product is running low on stock:
+    try {
+      const subject = `Low Stock Alert: ${productName} (SKU: ${sku})`;
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Low Stock Alert</h2>
+          <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin: 0 0 12px 0; color: #991b1b;">Product Information</h3>
+            <p><strong>Product Name:</strong> ${productName}</p>
+            <p><strong>SKU:</strong> ${sku}</p>
+            <p><strong>Current Stock:</strong> ${currentStock} units</p>
+            <p><strong>Minimum Required:</strong> ${minimumQuantity} units</p>
+            <p><strong>Stock Shortage:</strong> ${minimumQuantity - currentStock} units</p>
+          </div>
+          <p>Please arrange to restock this product as soon as possible to avoid stockouts.</p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="font-size: 12px; color: #6b7280;">
+            This is an automated alert from your Inventory Management System.
+          </p>
+        </div>
+      `;
 
-Product: ${productName}
-SKU: ${sku}
-Current Stock: ${currentStock}
-Minimum Quantity: ${minimumQuantity}
+      const textContent = `
+Low Stock Alert: ${productName} (SKU: ${sku})
 
-Please arrange for restocking at your earliest convenience.
+Product Information:
+- Product Name: ${productName}
+- SKU: ${sku}
+- Current Stock: ${currentStock} units
+- Minimum Required: ${minimumQuantity} units
+- Stock Shortage: ${minimumQuantity - currentStock} units
 
-Best regards,
-StockAlert Pro System
-    `;
+Please arrange to restock this product as soon as possible to avoid stockouts.
 
-    const html = `
-      <h2>Low Stock Alert</h2>
-      <p>Dear Supplier,</p>
-      <p>This is an automated notification that the following product is running low on stock:</p>
-      <ul>
-        <li><strong>Product:</strong> ${productName}</li>
-        <li><strong>SKU:</strong> ${sku}</li>
-        <li><strong>Current Stock:</strong> ${currentStock}</li>
-        <li><strong>Minimum Quantity:</strong> ${minimumQuantity}</li>
-      </ul>
-      <p>Please arrange for restocking at your earliest convenience.</p>
-      <p>Best regards,<br>StockAlert Pro System</p>
-    `;
+This is an automated alert from your Inventory Management System.
+      `;
 
-    return this.sendEmail({
-      to: supplierEmail,
-      from: senderEmail,
-      subject,
-      text,
-      html,
-    });
+      const mailOptions = {
+        from: senderEmail,
+        to: supplierEmail,
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Low stock alert sent for ${productName} to ${supplierEmail}`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send low stock alert:", error);
+      return false;
+    }
+  }
+
+  async sendTestEmail(toEmail: string, fromEmail: string): Promise<boolean> {
+    if (!this.isConfigured || !this.transporter) {
+      console.error("Email service not configured");
+      return false;
+    }
+
+    try {
+      const mailOptions = {
+        from: fromEmail,
+        to: toEmail,
+        subject: "Test Email from Inventory Management System",
+        text: "This is a test email to verify your email configuration is working correctly.",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">Email Configuration Test</h2>
+            <p>This is a test email to verify your email configuration is working correctly.</p>
+            <p>If you received this email, your Gmail SMTP configuration is set up properly.</p>
+          </div>
+        `,
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Test email sent to ${toEmail}`);
+      return true;
+    } catch (error) {
+      console.error("Failed to send test email:", error);
+      return false;
+    }
+  }
+
+  isEmailConfigured(): boolean {
+    return this.isConfigured;
   }
 }
 

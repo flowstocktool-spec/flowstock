@@ -1,11 +1,14 @@
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import {
   type User, type InsertUser,
   type Supplier, type InsertSupplier,
   type Product, type InsertProduct,
   type StockReport, type InsertStockReport,
-  type Alert
+  type Alert,
+  users, suppliers, products, stockReports, alerts
 } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -40,178 +43,140 @@ export interface IStorage {
   getAlertsByUserId(userId: string): Promise<Alert[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private suppliers: Map<string, Supplier>;
-  private products: Map<string, Product>;
-  private stockReports: Map<string, StockReport>;
-  private alerts: Map<string, Alert>;
+class PostgresStorage implements IStorage {
+  private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    this.users = new Map();
-    this.suppliers = new Map();
-    this.products = new Map();
-    this.stockReports = new Map();
-    this.alerts = new Map();
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is required");
+    }
+
+    const client = postgres(process.env.DATABASE_URL);
+    this.db = drizzle(client);
   }
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id, createdAt: new Date() };
-    this.users.set(id, user);
-    return user;
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...updates };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
+    return result[0];
   }
 
   // Supplier methods
   async getSupplier(id: string): Promise<Supplier | undefined> {
-    return this.suppliers.get(id);
+    const result = await this.db.select().from(suppliers).where(eq(suppliers.id, id)).limit(1);
+    return result[0];
   }
 
   async getSuppliersByUserId(userId: string): Promise<Supplier[]> {
-    return Array.from(this.suppliers.values()).filter(
-      (supplier) => supplier.userId === userId,
-    );
+    return await this.db.select().from(suppliers).where(eq(suppliers.userId, userId));
   }
 
   async createSupplier(insertSupplier: InsertSupplier): Promise<Supplier> {
-    const id = randomUUID();
-    const supplier: Supplier = { ...insertSupplier, id, createdAt: new Date() };
-    this.suppliers.set(id, supplier);
-    return supplier;
+    const result = await this.db.insert(suppliers).values(insertSupplier).returning();
+    return result[0];
   }
 
   async updateSupplier(id: string, updates: Partial<Supplier>): Promise<Supplier | undefined> {
-    const supplier = this.suppliers.get(id);
-    if (!supplier) return undefined;
-    
-    const updatedSupplier = { ...supplier, ...updates };
-    this.suppliers.set(id, updatedSupplier);
-    return updatedSupplier;
+    const result = await this.db.update(suppliers).set(updates).where(eq(suppliers.id, id)).returning();
+    return result[0];
   }
 
   async deleteSupplier(id: string): Promise<boolean> {
-    return this.suppliers.delete(id);
+    const result = await this.db.delete(suppliers).where(eq(suppliers.id, id)).returning();
+    return result.length > 0;
   }
 
   // Product methods
   async getProduct(id: string): Promise<Product | undefined> {
-    return this.products.get(id);
+    const result = await this.db.select().from(products).where(eq(products.id, id)).limit(1);
+    return result[0];
   }
 
   async getProductsByUserId(userId: string): Promise<Product[]> {
-    return Array.from(this.products.values()).filter(
-      (product) => product.userId === userId,
-    );
+    return await this.db.select().from(products).where(eq(products.userId, userId));
   }
 
   async getProductsBySku(sku: string): Promise<Product[]> {
-    return Array.from(this.products.values()).filter(
-      (product) => product.sku === sku,
-    );
+    return await this.db.select().from(products).where(eq(products.sku, sku));
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const id = randomUUID();
-    const product: Product = {
+    const result = await this.db.insert(products).values({
       ...insertProduct,
-      id,
       minimumQuantity: insertProduct.minimumQuantity || 10,
       currentStock: insertProduct.currentStock || 0,
-      lastUpdated: new Date()
-    };
-    this.products.set(id, product);
-    return product;
+    }).returning();
+    return result[0];
   }
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined> {
-    const product = this.products.get(id);
-    if (!product) return undefined;
-    
-    const updatedProduct = { ...product, ...updates, lastUpdated: new Date() };
-    this.products.set(id, updatedProduct);
-    return updatedProduct;
+    const result = await this.db.update(products).set({
+      ...updates,
+      lastUpdated: new Date()
+    }).where(eq(products.id, id)).returning();
+    return result[0];
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    return this.products.delete(id);
+    const result = await this.db.delete(products).where(eq(products.id, id)).returning();
+    return result.length > 0;
   }
 
   async updateProductStock(id: string, currentStock: number): Promise<Product | undefined> {
-    const product = this.products.get(id);
-    if (!product) return undefined;
-    
-    const updatedProduct = { ...product, currentStock, lastUpdated: new Date() };
-    this.products.set(id, updatedProduct);
-    return updatedProduct;
+    const result = await this.db.update(products).set({
+      currentStock,
+      lastUpdated: new Date()
+    }).where(eq(products.id, id)).returning();
+    return result[0];
   }
 
   // Stock report methods
   async createStockReport(insertReport: InsertStockReport): Promise<StockReport> {
-    const id = randomUUID();
-    const report: StockReport = {
-      ...insertReport,
-      id,
-      uploadedAt: new Date(),
-      processed: false,
-    };
-    this.stockReports.set(id, report);
-    return report;
+    const result = await this.db.insert(stockReports).values(insertReport).returning();
+    return result[0];
   }
 
   async getStockReportsByUserId(userId: string): Promise<StockReport[]> {
-    return Array.from(this.stockReports.values())
-      .filter((report) => report.userId === userId)
-      .sort((a, b) => (b.uploadedAt?.getTime() || 0) - (a.uploadedAt?.getTime() || 0));
+    return await this.db.select().from(stockReports)
+      .where(eq(stockReports.userId, userId))
+      .orderBy(stockReports.uploadedAt);
   }
 
   async updateStockReportProcessed(id: string, processed: boolean): Promise<StockReport | undefined> {
-    const report = this.stockReports.get(id);
-    if (!report) return undefined;
-    
-    const updatedReport = { ...report, processed };
-    this.stockReports.set(id, updatedReport);
-    return updatedReport;
+    const result = await this.db.update(stockReports).set({ processed }).where(eq(stockReports.id, id)).returning();
+    return result[0];
   }
 
   // Alert methods
   async createAlert(productId: string, supplierId: string, userId: string): Promise<Alert> {
-    const id = randomUUID();
-    const alert: Alert = {
-      id,
+    const result = await this.db.insert(alerts).values({
       productId,
       supplierId,
       userId,
-      sentAt: new Date(),
-    };
-    this.alerts.set(id, alert);
-    return alert;
+    }).returning();
+    return result[0];
   }
 
   async getAlertsByUserId(userId: string): Promise<Alert[]> {
-    return Array.from(this.alerts.values())
-      .filter((alert) => alert.userId === userId)
-      .sort((a, b) => (b.sentAt?.getTime() || 0) - (a.sentAt?.getTime() || 0));
+    return await this.db.select().from(alerts)
+      .where(eq(alerts.userId, userId))
+      .orderBy(alerts.sentAt);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PostgresStorage();

@@ -1,45 +1,15 @@
-import Papa from 'papaparse';
 
-export interface ParsedStockData {
+interface StockData {
   sku: string;
-  name?: string;
   currentStock: number;
-  [key: string]: any; // Allow additional fields
 }
 
-export interface ParseResult {
+interface ParseResult {
   success: boolean;
-  data: ParsedStockData[];
+  data: StockData[];
   errors: string[];
   totalRows: number;
   validRows: number;
-}
-
-// Common column mappings for different e-commerce platforms
-const COLUMN_MAPPINGS = {
-  sku: ['sku', 'SKU', 'product_id', 'Product ID', 'item_id', 'Item ID', 'model', 'Model'],
-  name: ['name', 'Name', 'title', 'Title', 'product_name', 'Product Name', 'item_name', 'Item Name'],
-  stock: ['stock', 'Stock', 'quantity', 'Quantity', 'available', 'Available', 'inventory', 'Inventory', 'qty', 'Qty', 'stock_quantity', 'Stock Quantity']
-};
-
-function findColumnIndex(headers: string[], possibleNames: string[]): number {
-  for (const name of possibleNames) {
-    const index = headers.findIndex(header => 
-      header.toLowerCase().includes(name.toLowerCase()) ||
-      name.toLowerCase().includes(header.toLowerCase())
-    );
-    if (index !== -1) return index;
-  }
-  return -1;
-}
-
-function parseStockValue(value: any): number {
-  if (typeof value === 'number') return Math.max(0, Math.floor(value));
-  if (typeof value === 'string') {
-    const parsed = parseInt(value.replace(/[^0-9]/g, ''), 10);
-    return isNaN(parsed) ? 0 : Math.max(0, parsed);
-  }
-  return 0;
 }
 
 export function parseStockReport(csvContent: string): ParseResult {
@@ -48,76 +18,122 @@ export function parseStockReport(csvContent: string): ParseResult {
     data: [],
     errors: [],
     totalRows: 0,
-    validRows: 0
+    validRows: 0,
   };
 
   try {
-    const parseResult = Papa.parse(csvContent, {
-      header: false,
-      skipEmptyLines: true,
-      transformHeader: (header: string) => header.trim(),
-    });
-
-    if (parseResult.errors.length > 0) {
-      result.errors = parseResult.errors.map(error => error.message);
-    }
-
-    const rows = parseResult.data as string[][];
-    if (rows.length < 2) {
-      result.errors.push('File must contain at least a header row and one data row');
+    const lines = csvContent.trim().split('\n');
+    
+    if (lines.length === 0) {
+      result.errors.push("CSV file is empty");
       return result;
     }
 
-    const headers = rows[0].map(h => (h || '').trim());
-    const dataRows = rows.slice(1);
-    result.totalRows = dataRows.length;
+    result.totalRows = lines.length - 1; // Exclude header row
 
-    // Find column indices
-    const skuIndex = findColumnIndex(headers, COLUMN_MAPPINGS.sku);
-    const nameIndex = findColumnIndex(headers, COLUMN_MAPPINGS.name);
-    const stockIndex = findColumnIndex(headers, COLUMN_MAPPINGS.stock);
+    // Parse header to find column indices
+    const header = lines[0].toLowerCase().split(',').map(col => col.trim());
+    const skuIndex = header.findIndex(col => 
+      col.includes('sku') || col.includes('product_code') || col.includes('code')
+    );
+    const stockIndex = header.findIndex(col => 
+      col.includes('stock') || col.includes('quantity') || col.includes('qty')
+    );
 
     if (skuIndex === -1) {
-      result.errors.push('Could not find SKU column. Expected one of: ' + COLUMN_MAPPINGS.sku.join(', '));
+      result.errors.push("No SKU column found. Expected column names: 'sku', 'product_code', or 'code'");
       return result;
     }
 
     if (stockIndex === -1) {
-      result.errors.push('Could not find stock/quantity column. Expected one of: ' + COLUMN_MAPPINGS.stock.join(', '));
+      result.errors.push("No stock column found. Expected column names: 'stock', 'quantity', or 'qty'");
       return result;
     }
 
     // Parse data rows
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      const sku = (row[skuIndex] || '').trim();
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue; // Skip empty lines
+
+      const columns = line.split(',').map(col => col.trim());
       
-      if (!sku) {
-        result.errors.push(`Row ${i + 2}: Missing SKU`);
+      if (columns.length <= Math.max(skuIndex, stockIndex)) {
+        result.errors.push(`Row ${i + 1}: Insufficient columns`);
         continue;
       }
 
-      const stockValue = parseStockValue(row[stockIndex]);
-      const name = nameIndex !== -1 ? (row[nameIndex] || '').trim() : undefined;
+      const sku = columns[skuIndex]?.replace(/['"]/g, ''); // Remove quotes
+      const stockStr = columns[stockIndex]?.replace(/['"]/g, '');
 
-      const parsedRow: ParsedStockData = {
-        sku,
-        currentStock: stockValue,
-      };
-
-      if (name) {
-        parsedRow.name = name;
+      if (!sku) {
+        result.errors.push(`Row ${i + 1}: Empty SKU`);
+        continue;
       }
 
-      result.data.push(parsedRow);
+      const currentStock = parseInt(stockStr, 10);
+      if (isNaN(currentStock) || currentStock < 0) {
+        result.errors.push(`Row ${i + 1}: Invalid stock value '${stockStr}'`);
+        continue;
+      }
+
+      result.data.push({
+        sku: sku.toUpperCase(), // Normalize SKU to uppercase
+        currentStock,
+      });
       result.validRows++;
     }
 
     result.success = result.validRows > 0;
-    return result;
+    if (!result.success && result.errors.length === 0) {
+      result.errors.push("No valid data rows found");
+    }
 
   } catch (error) {
-    result.errors.push(`Parse error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    return result;
+    result.errors.push(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  return result;
+}
+
+export function validateStockReportFormat(csvContent: string): { valid: boolean; message: string } {
+  try {
+    const lines = csvContent.trim().split('\n');
+    
+    if (lines.length === 0) {
+      return { valid: false, message: "File is empty" };
+    }
+
+    if (lines.length === 1) {
+      return { valid: false, message: "File contains only headers, no data rows" };
+    }
+
+    const header = lines[0].toLowerCase().split(',').map(col => col.trim());
+    const hasSku = header.some(col => 
+      col.includes('sku') || col.includes('product_code') || col.includes('code')
+    );
+    const hasStock = header.some(col => 
+      col.includes('stock') || col.includes('quantity') || col.includes('qty')
+    );
+
+    if (!hasSku) {
+      return { 
+        valid: false, 
+        message: "Missing SKU column. Please include a column named 'sku', 'product_code', or 'code'" 
+      };
+    }
+
+    if (!hasStock) {
+      return { 
+        valid: false, 
+        message: "Missing stock column. Please include a column named 'stock', 'quantity', or 'qty'" 
+      };
+    }
+
+    return { valid: true, message: "Format is valid" };
+  } catch (error) {
+    return { 
+      valid: false, 
+      message: `Format validation error: ${error instanceof Error ? error.message : String(error)}` 
+    };
   }
 }
