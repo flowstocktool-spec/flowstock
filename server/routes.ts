@@ -48,18 +48,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:id', async (req, res) => {
-    try {
-      const updates = req.body;
-      const user = await storage.updateUser(req.params.id, updates);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update user' });
-    }
-  });
 
   // Get current user (demo user for now)
   app.get('/api/user/current', async (req, res) => {
@@ -139,11 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product routes
   app.get('/api/products', async (req, res) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+      // Get current user ID from demo user
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
       }
-      const products = await storage.getProductsByUserId(userId);
+      const products = await storage.getProductsByUserId(currentUser.id);
 
       // Enrich products with supplier information
       const enrichedProducts = await Promise.all(

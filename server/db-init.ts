@@ -22,8 +22,8 @@ export async function createSampleData() {
     console.log("🌱 Creating sample data...");
 
     // Check if sample data already exists
-    const existingUsers = await storage.getUser("sample-user-check");
-    if (existingUsers) {
+    const existingUser = await storage.getUserByUsername('demo_user');
+    if (existingUser) {
       console.log("ℹ️  Sample data already exists, skipping creation");
       return;
     }

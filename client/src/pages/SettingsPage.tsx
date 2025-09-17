@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,18 +6,43 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, User, Key, Save, TestTube, CheckCircle, AlertTriangle } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
-    username: 'john_seller',
-    email: 'john@example.com',
-    senderEmail: 'mithuan137@gmail.com',
+    username: '',
+    email: '',
+    senderEmail: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+
+  // Fetch current user data
+  const { data: currentUser, isLoading: userLoading } = useQuery({
+    queryKey: ['/api/user/current'],
+    queryFn: async () => {
+      const response = await fetch('/api/user/current');
+      if (!response.ok) {
+        throw new Error('Failed to fetch current user');
+      }
+      return response.json();
+    },
+  });
+
+  // Update settings when user data is loaded
+  useEffect(() => {
+    if (currentUser) {
+      setSettings(prev => ({
+        ...prev,
+        username: currentUser.username || '',
+        email: currentUser.email || '',
+        senderEmail: currentUser.senderEmail || '',
+      }));
+    }
+  }, [currentUser]);
 
   const [emailConfig, setEmailConfig] = useState({
     gmailUsername: '',
@@ -75,8 +100,10 @@ export default function SettingsPage() {
 
   const saveUserMutation = useMutation({
     mutationFn: async (userData: { username: string; email: string; senderEmail: string }) => {
-      const userId = 'test-user-1'; // TODO: Replace with actual user ID from auth context
-      const response = await fetch(`/api/users/${userId}`, {
+      if (!currentUser?.id) {
+        throw new Error('User not found');
+      }
+      const response = await fetch(`/api/users/${currentUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -89,6 +116,8 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       setFeedback({ type: 'success', message: 'Profile settings saved successfully!' });
+      // Invalidate the current user query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] });
     },
     onError: (error) => {
       setFeedback({ type: 'error', message: error.message });
@@ -162,6 +191,17 @@ export default function SettingsPage() {
       });
     }
   };
+
+  if (userLoading) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold" data-testid="heading-settings">Settings</h1>
+          <p className="text-muted-foreground">Loading your settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
