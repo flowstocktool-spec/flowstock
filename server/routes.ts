@@ -4,6 +4,7 @@ import multer from "multer";
 import { storage } from "./storage";
 import { emailService } from "./email";
 import { parseStockReport } from "./stockParser";
+import { intelligentParser } from "./intelligentParser";
 import {
   insertUserSchema,
   insertSupplierSchema,
@@ -291,26 +292,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const report = await storage.createStockReport(reportData);
 
-      // Parse the CSV file
-      const csvContent = req.file.buffer.toString('utf-8');
-      const parseResult = await parseStockReport(csvContent); // Corrected: make stock parsing async
+      // Parse the file using intelligent parser
+      console.log(`📁 Processing file: ${req.file.originalname} (${req.file.size} bytes)`);
+      const parseResult = await intelligentParser.parseFile(req.file.buffer, req.file.originalname);
 
       if (!parseResult.success) {
         return res.status(400).json({
           error: 'Failed to parse stock report',
           details: parseResult.errors,
+          metadata: parseResult.metadata,
         });
       }
+
+      console.log(`✅ Intelligent parsing successful:`);
+      console.log(`   Platform: ${parseResult.metadata.detectedPlatform} (${Math.round(parseResult.metadata.confidence * 100)}% confidence)`);
+      console.log(`   Format: ${parseResult.metadata.fileFormat}`);
+      console.log(`   Rows: ${parseResult.metadata.validRows}/${parseResult.metadata.totalRows} valid`);
+      console.log(`   Columns: ${Object.keys(parseResult.metadata.detectedColumns).join(', ')}`);
 
       // Update product stock levels and send alerts
       let alertsGenerated = 0;
       const alertErrors: string[] = [];
+      let productsCreated = 0;
+      let productsUpdated = 0;
 
       // Use batch update for much better performance
       const updates = parseResult.data.map(row => ({
         sku: row.sku,
         stock: row.currentStock,
-        name: undefined
+        name: row.name
       }));
 
       const updatedCount = await storage.batchUpdateProductStock(userId, updates);
@@ -373,10 +383,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         report,
         summary: {
-          totalRows: parseResult.data.length,
-          validRows: parseResult.data.length,
+          totalRows: parseResult.metadata.totalRows,
+          validRows: parseResult.metadata.validRows,
           updatedProducts: updatedCount,
+          productsCreated,
+          productsUpdated,
           alertsGenerated,
+          detectedPlatform: parseResult.metadata.detectedPlatform,
+          platformConfidence: Math.round(parseResult.metadata.confidence * 100),
+          fileFormat: parseResult.metadata.fileFormat,
+          detectedColumns: parseResult.metadata.detectedColumns,
           errors: [...parseResult.errors, ...alertErrors],
         },
       });
@@ -481,6 +497,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { toEmail, fromEmail } = req.body;
       if (!toEmail || !fromEmail) {
+
+
+  // Get column mapping suggestions for manual review
+  app.post('/api/stock-reports/analyze', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log(`🔍 Analyzing file: ${req.file.originalname}`);
+      
+      // Get just the column suggestions without full parsing
+      const parseResult = await intelligentParser.parseFile(req.file.buffer, req.file.originalname);
+      
+      if (!parseResult.success && parseResult.metadata.totalRows === 0) {
+        return res.status(400).json({ 
+          error: 'Unable to analyze file',
+          details: parseResult.errors 
+        });
+      }
+
+      res.json({
+        filename: req.file.originalname,
+        metadata: parseResult.metadata,
+        suggestions: parseResult.metadata.detectedColumns,
+        sampleData: parseResult.data.slice(0, 3), // First 3 rows for preview
+        errors: parseResult.errors
+      });
+    } catch (error) {
+      console.error('❌ File analysis error:', error);
+      res.status(500).json({ error: 'Failed to analyze file' });
+    }
+  });
+
         return res.status(400).json({ error: 'Both toEmail and fromEmail are required' });
       }
 
