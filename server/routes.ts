@@ -24,6 +24,59 @@ const upload = multer({
   },
 });
 
+// Helper function to automatically send stock alerts
+async function sendAutomaticStockAlert(product: any) {
+  const isLowStock = product.currentStock <= product.minimumQuantity;
+  const isOutOfStock = product.currentStock === 0;
+  
+  console.log(`\n🔍 AUTO ALERT CHECK:`);
+  console.log(`Product: ${product.name} (${product.sku})`);
+  console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
+  console.log(`Is low stock: ${isLowStock}, Is out of stock: ${isOutOfStock}`);
+  console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
+  
+  if (isLowStock || isOutOfStock) {
+    if (!emailService.isEmailConfigured()) {
+      console.log('⚠️ Email service not configured - cannot send automatic alerts');
+      return;
+    }
+
+    try {
+      const supplier = await storage.getSupplier(product.supplierId);
+      const user = await storage.getUser(product.userId);
+
+      console.log(`Supplier: ${supplier?.name || 'None'} (${supplier?.email || 'No email'})`);
+      console.log(`User: ${user?.username || 'None'} (sender: ${user?.senderEmail || 'No sender email'})`);
+
+      if (supplier && user && supplier.email && user.senderEmail) {
+        console.log(`📧 Sending automatic ${isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'} alert to ${supplier.email}`);
+        
+        const emailSent = await emailService.sendLowStockAlert(
+          product.name,
+          product.sku,
+          product.currentStock,
+          product.minimumQuantity,
+          supplier.email,
+          user.senderEmail
+        );
+
+        if (emailSent) {
+          await storage.createAlert(product.id, supplier.id, product.userId);
+          console.log(`✅ Automatic alert sent: ${product.name} to ${supplier.email}`);
+        } else {
+          console.log(`❌ Failed to send automatic alert for: ${product.name}`);
+        }
+      } else {
+        console.log('❌ Cannot send alert - missing supplier email or user sender email');
+      }
+    } catch (error) {
+      console.error('❌ Error sending automatic stock alert:', error);
+    }
+  } else {
+    console.log('✅ Stock level is adequate - no alert needed');
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // User routes
   app.post('/api/users', async (req, res) => {
@@ -180,39 +233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const product = await storage.createProduct(productData);
       console.log(`✅ New product created: ${product.name} (${product.sku}) for user ${currentUser.id}`);
       
-      // Check if stock alert should be sent immediately
-      if (product.currentStock <= product.minimumQuantity) {
-        console.log(`🔔 Low stock detected for new product: ${product.name}`);
-        
-        if (emailService.isEmailConfigured()) {
-          try {
-            const supplier = await storage.getSupplier(product.supplierId);
-            const user = await storage.getUser(product.userId);
-
-            if (supplier && user && supplier.email && user.senderEmail) {
-              console.log(`📧 Sending low stock alert for new product to ${supplier.email}`);
-              
-              const emailSent = await emailService.sendLowStockAlert(
-                product.name,
-                product.sku,
-                product.currentStock,
-                product.minimumQuantity,
-                supplier.email,
-                user.senderEmail
-              );
-
-              if (emailSent) {
-                await storage.createAlert(product.id, supplier.id, product.userId);
-                console.log(`✅ Low stock alert sent for new product: ${product.name}`);
-              }
-            }
-          } catch (alertError) {
-            console.error('❌ Error sending low stock alert for new product:', alertError);
-          }
-        } else {
-          console.log('⚠️ Email service not configured - cannot send low stock alert for new product');
-        }
-      }
+      // Automatically send alert if the new product is low stock or out of stock
+      await sendAutomaticStockAlert(product);
       
       res.json(product);
     } catch (error) {
@@ -229,63 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      // Check if stock alert should be sent
-      console.log(`\n🔍 PRODUCT UPDATE DEBUG:`);
-      console.log(`Product: ${product.name} (${product.sku})`);
-      console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
-      console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
-      console.log(`Should send alert: ${product.currentStock <= product.minimumQuantity}`);
-      
-      if (product.currentStock <= product.minimumQuantity) {
-        console.log(`Low stock detected for ${product.name}`);
-        
-        if (!emailService.isEmailConfigured()) {
-          console.log('Email service not configured - cannot send alerts');
-        } else {
-          try {
-            // Get supplier and user information
-            const supplier = await storage.getSupplier(product.supplierId);
-            const user = await storage.getUser(product.userId);
-
-            console.log(`Supplier found: ${supplier ? supplier.name : 'None'}`);
-            console.log(`User found: ${user ? user.username : 'None'}`);
-            console.log(`Supplier email: ${supplier?.email || 'None'}`);
-            console.log(`User sender email: ${user?.senderEmail || 'None'}`);
-
-            if (supplier && user && supplier.email && user.senderEmail) {
-              console.log(`Attempting to send email to ${supplier.email}`);
-              
-              // Send email alert
-              const emailSent = await emailService.sendLowStockAlert(
-                product.name,
-                product.sku,
-                product.currentStock,
-                product.minimumQuantity,
-                supplier.email,
-                user.senderEmail
-              );
-
-              if (emailSent) {
-                // Create alert record
-                await storage.createAlert(product.id, supplier.id, product.userId);
-                console.log(`✅ Low stock alert sent for product: ${product.name} to ${supplier.email}`);
-              } else {
-                console.log(`❌ Failed to send alert for product: ${product.name}`);
-              }
-            } else {
-              console.log('❌ Missing required information for sending alert:');
-              console.log(`  - Supplier: ${supplier ? 'Found' : 'Missing'}`);
-              console.log(`  - User: ${user ? 'Found' : 'Missing'}`);
-              console.log(`  - Supplier email: ${supplier?.email ? 'Present' : 'Missing'}`);
-              console.log(`  - User sender email: ${user?.senderEmail ? 'Present' : 'Missing'}`);
-            }
-          } catch (alertError) {
-            console.error('❌ Error sending low stock alert:', alertError);
-          }
-        }
-      } else {
-        console.log('Stock level is above minimum threshold - no alert needed');
-      }
+      // Automatically send alert if stock is low or out of stock
+      await sendAutomaticStockAlert(product);
 
       res.json(product);
     } catch (error) {
@@ -354,35 +321,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userProducts = products.filter(p => p.userId === userId);
 
         for (const product of userProducts) {
-          // Check if alert needed
-          if (stockData.currentStock <= product.minimumQuantity) {
-            try {
-              // Get supplier and user information
-              const supplier = await storage.getSupplier(product.supplierId);
-              const user = await storage.getUser(userId);
+          try {
+            // Update the product with new stock level
+            const updatedProduct = await storage.updateProduct(product.id, {
+              currentStock: stockData.currentStock
+            });
+            
+            if (updatedProduct) {
+              // Send automatic alert if needed
+              const isLowStock = stockData.currentStock <= product.minimumQuantity;
+              const isOutOfStock = stockData.currentStock === 0;
+              
+              if (isLowStock || isOutOfStock) {
+                const supplier = await storage.getSupplier(product.supplierId);
+                const user = await storage.getUser(userId);
 
-              if (supplier && user) {
-                // Send email alert
-                const emailSent = await emailService.sendLowStockAlert(
-                  product.name,
-                  product.sku,
-                  stockData.currentStock,
-                  product.minimumQuantity,
-                  supplier.email,
-                  user.senderEmail
-                );
+                if (supplier && user && supplier.email && user.senderEmail && emailService.isEmailConfigured()) {
+                  console.log(`📧 CSV Upload: Sending ${isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'} alert for ${product.name}`);
+                  
+                  const emailSent = await emailService.sendLowStockAlert(
+                    product.name,
+                    product.sku,
+                    stockData.currentStock,
+                    product.minimumQuantity,
+                    supplier.email,
+                    user.senderEmail
+                  );
 
-                if (emailSent) {
-                  // Create alert record
-                  await storage.createAlert(product.id, supplier.id, userId);
-                  alertsGenerated++;
+                  if (emailSent) {
+                    await storage.createAlert(product.id, supplier.id, userId);
+                    alertsGenerated++;
+                    console.log(`✅ CSV Alert sent: ${product.name} to ${supplier.email}`);
+                  } else {
+                    alertErrors.push(`Failed to send alert for ${product.name}`);
+                  }
                 } else {
-                  alertErrors.push(`Failed to send alert for ${product.name}`);
+                  alertErrors.push(`Cannot send alert for ${product.name} - missing email configuration`);
                 }
               }
-            } catch (error) {
-              alertErrors.push(`Error processing alert for ${product.name}: ${error}`);
             }
+          } catch (error) {
+            alertErrors.push(`Error processing alert for ${product.name}: ${error}`);
           }
         }
       }
