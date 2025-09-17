@@ -61,14 +61,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user (demo user for now)
+  app.get('/api/user/current', async (req, res) => {
+    try {
+      const user = await storage.getUserByUsername('demo_user');
+      if (!user) {
+        return res.status(404).json({ error: 'Demo user not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch current user' });
+    }
+  });
+
   // Supplier routes
   app.get('/api/suppliers', async (req, res) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+      // Get current user ID from demo user
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
       }
-      const suppliers = await storage.getSuppliersByUserId(userId);
+      const suppliers = await storage.getSuppliersByUserId(currentUser.id);
       
       // Enrich suppliers with product count
       const enrichedSuppliers = await Promise.all(
@@ -280,8 +294,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use batch update for much better performance
       const updates = parseResult.data.map(row => ({
         sku: row.sku,
-        stock: row.stock,
-        name: row.name
+        stock: row.currentStock,
+        name: undefined
       }));
 
       const updatedCount = await storage.batchUpdateProductStock(userId, updates);
@@ -293,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         for (const product of userProducts) {
           // Check if alert needed
-          if (stockData.stock <= product.minimumQuantity) {
+          if (stockData.currentStock <= product.minimumQuantity) {
             try {
               // Get supplier and user information
               const supplier = await storage.getSupplier(product.supplierId);
@@ -304,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const emailSent = await emailService.sendLowStockAlert(
                   product.name,
                   product.sku,
-                  stockData.stock,
+                  stockData.currentStock,
                   product.minimumQuantity,
                   supplier.email,
                   user.senderEmail

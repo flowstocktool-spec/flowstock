@@ -34,7 +34,7 @@ export interface IStorage {
   updateProduct(id: string, updates: Partial<Product>): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<boolean>;
   updateProductStock(id: string, currentStock: number): Promise<Product | undefined>;
-  updateProductStock(userId: string, sku: string, stock: number, name?: string): Promise<void>;
+  updateProductStockBySku(userId: string, sku: string, stock: number, name?: string): Promise<void>;
   batchUpdateProductStock(userId: string, updates: Array<{sku: string, stock: number, name?: string}>): Promise<number>;
   getProductBySku(userId: string, sku: string): Promise<Product | undefined>;
 
@@ -181,7 +181,7 @@ class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async updateProductStock(userId: string, sku: string, stock: number, name?: string): Promise<void> {
+  async updateProductStockBySku(userId: string, sku: string, stock: number, name?: string): Promise<void> {
     try {
       await this.db.insert(products).values({
           userId,
