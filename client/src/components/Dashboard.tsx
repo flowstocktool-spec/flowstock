@@ -1,26 +1,83 @@
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, AlertTriangle, Upload, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import StockBadge from "./StockBadge";
 
-// Mock data - todo: remove mock functionality
-const mockProducts = [
-  { id: '1', name: 'Wireless Headphones', sku: 'WH-001', currentStock: 15, minimumQuantity: 10 },
-  { id: '2', name: 'Bluetooth Speaker', sku: 'BS-002', currentStock: 3, minimumQuantity: 10 },
-  { id: '3', name: 'Phone Case', sku: 'PC-003', currentStock: 0, minimumQuantity: 5 },
-];
+interface DashboardStats {
+  totalProducts: number;
+  totalSuppliers: number;
+  lowStockItems: number;
+  outOfStockItems: number;
+  alertsSentToday: number;
+  totalAlerts: number;
+}
 
-const mockStats = {
-  totalProducts: 156,
-  lowStockItems: 12,
-  outOfStockItems: 3,
-  totalSuppliers: 8,
-  alertsSentToday: 5,
-};
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  currentStock: number;
+  minimumQuantity: number;
+}
 
 export default function Dashboard() {
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+    queryFn: async (): Promise<DashboardStats> => {
+      const response = await fetch('/api/dashboard/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard stats');
+      }
+      return response.json();
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+  });
+
+  // Fetch products for attention section
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ["/api/products"],
+    queryFn: async (): Promise<Product[]> => {
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const data = await response.json();
+      // Filter items needing attention (low stock or out of stock)
+      return data.filter((product: Product) => 
+        product.currentStock <= product.minimumQuantity
+      ).slice(0, 5); // Show only top 5 items needing attention
+    },
+    refetchInterval: 30000,
+  });
+
   const handleUploadClick = () => {
     console.log('Upload stock report triggered');
+    // Navigate to upload page (you can implement this with your router)
+    window.location.href = '/upload';
+  };
+
+  const handleAddProduct = () => {
+    console.log('Add product triggered');
+    window.location.href = '/products';
+  };
+
+  const handleAddSupplier = () => {
+    console.log('Add supplier triggered');
+    window.location.href = '/suppliers';
+  };
+
+  // Default values while loading
+  const displayStats = stats || {
+    totalProducts: 0,
+    totalSuppliers: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    alertsSentToday: 0,
+    totalAlerts: 0
   };
 
   return (
@@ -33,7 +90,9 @@ export default function Dashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-total-products">{mockStats.totalProducts}</div>
+            <div className="text-2xl font-bold" data-testid="text-total-products">
+              {statsLoading ? '...' : displayStats.totalProducts}
+            </div>
           </CardContent>
         </Card>
 
@@ -43,7 +102,9 @@ export default function Dashboard() {
             <AlertTriangle className="h-4 w-4 text-chart-2" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-chart-2" data-testid="text-low-stock">{mockStats.lowStockItems}</div>
+            <div className="text-2xl font-bold text-chart-2" data-testid="text-low-stock">
+              {statsLoading ? '...' : displayStats.lowStockItems}
+            </div>
           </CardContent>
         </Card>
 
@@ -53,7 +114,9 @@ export default function Dashboard() {
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive" data-testid="text-out-stock">{mockStats.outOfStockItems}</div>
+            <div className="text-2xl font-bold text-destructive" data-testid="text-out-stock">
+              {statsLoading ? '...' : displayStats.outOfStockItems}
+            </div>
           </CardContent>
         </Card>
 
@@ -63,10 +126,35 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-suppliers">{mockStats.totalSuppliers}</div>
+            <div className="text-2xl font-bold" data-testid="text-suppliers">
+              {statsLoading ? '...' : displayStats.totalSuppliers}
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Alerts Summary Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Alert Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Alerts Sent Today</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {statsLoading ? '...' : displayStats.alertsSentToday}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Alerts</p>
+              <p className="text-2xl font-bold">
+                {statsLoading ? '...' : displayStats.totalAlerts}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>
@@ -78,11 +166,11 @@ export default function Dashboard() {
             <Upload className="mr-2 h-4 w-4" />
             Upload Stock Report
           </Button>
-          <Button variant="outline" data-testid="button-add-product">
+          <Button variant="outline" onClick={handleAddProduct} data-testid="button-add-product">
             <Package className="mr-2 h-4 w-4" />
             Add Product
           </Button>
-          <Button variant="outline" data-testid="button-add-supplier">
+          <Button variant="outline" onClick={handleAddSupplier} data-testid="button-add-supplier">
             <Users className="mr-2 h-4 w-4" />
             Add Supplier
           </Button>
@@ -95,18 +183,26 @@ export default function Dashboard() {
           <CardTitle>Items Needing Attention</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {mockProducts.map((product) => (
-              <div key={product.id} className="flex items-center justify-between p-4 border rounded-md" data-testid={`item-attention-${product.id}`}>
-                <div>
-                  <h4 className="font-medium">{product.name}</h4>
-                  <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
-                  <p className="text-sm font-mono">Stock: {product.currentStock} / Min: {product.minimumQuantity}</p>
+          {productsLoading ? (
+            <div className="text-center py-4">Loading items...</div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              🎉 All items are well-stocked!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {products.map((product) => (
+                <div key={product.id} className="flex items-center justify-between p-4 border rounded-md" data-testid={`item-attention-${product.id}`}>
+                  <div>
+                    <h4 className="font-medium">{product.name}</h4>
+                    <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+                    <p className="text-sm font-mono">Stock: {product.currentStock} / Min: {product.minimumQuantity}</p>
+                  </div>
+                  <StockBadge currentStock={product.currentStock} minimumQuantity={product.minimumQuantity} />
                 </div>
-                <StockBadge currentStock={product.currentStock} minimumQuantity={product.minimumQuantity} />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

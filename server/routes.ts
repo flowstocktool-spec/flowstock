@@ -613,14 +613,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
   app.get('/api/dashboard/stats', async (req, res) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+      // Get current user ID from demo user
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
       }
 
-      const products = await storage.getProductsByUserId(userId);
-      const suppliers = await storage.getSuppliersByUserId(userId);
-      const alerts = await storage.getAlertsByUserId(userId);
+      const products = await storage.getProductsByUserId(currentUser.id);
+      const suppliers = await storage.getSuppliersByUserId(currentUser.id);
+      const alerts = await storage.getAlertsByUserId(currentUser.id);
 
       const lowStockItems = products.filter(p => p.currentStock <= p.minimumQuantity && p.currentStock > 0);
       const outOfStockItems = products.filter(p => p.currentStock === 0);
