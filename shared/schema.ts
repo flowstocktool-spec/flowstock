@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import * as crypto from 'crypto';
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -9,6 +10,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   senderEmail: text("sender_email").notNull(),
   password: text("password").notNull(),
+  gmailUsername: text("gmail_username"),
+  gmailAppPassword: text("gmail_app_password"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -53,6 +56,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   senderEmail: true,
   password: true,
+  gmailUsername: true,
+  gmailAppPassword: true,
 });
 
 export const insertSupplierSchema = createInsertSchema(suppliers).pick({

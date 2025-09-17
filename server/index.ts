@@ -4,6 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./database";
 import { testDatabaseConnection } from "./db-test";
 import { createSampleData } from "./db-init";
+import { storage } from "./storage";
+import { emailService } from "./email";
 
 const app = express();
 app.use(express.json());
@@ -39,23 +41,47 @@ app.use((req, res, next) => {
   next();
 });
 
+async function restoreEmailConfiguration() {
+  try {
+    const demoUser = await storage.getUserByUsername('demo_user');
+    if (demoUser && demoUser.gmailUsername && demoUser.gmailAppPassword) {
+      console.log('🔧 Restoring email configuration...');
+      const configured = await emailService.configure({
+        username: demoUser.gmailUsername,
+        password: demoUser.gmailAppPassword
+      });
+      if (configured) {
+        console.log('✅ Email configuration restored successfully');
+      } else {
+        console.log('⚠️ Failed to restore email configuration - credentials may be invalid');
+      }
+    } else {
+      console.log('ℹ️ No saved email configuration found');
+    }
+  } catch (error) {
+    console.error('❌ Error restoring email configuration:', error);
+  }
+}
+
 (async () => {
   // Initialize database
   await initializeDatabase();
-  
+
   // Test database connection
   const dbConnected = await testDatabaseConnection();
   if (!dbConnected) {
     console.error('Failed to connect to database - application may not work correctly');
   }
-  
+
   // Create sample data for demo purposes
   try {
     await createSampleData();
+    // Restore email configuration after database is ready
+    await restoreEmailConfiguration();
   } catch (error) {
     console.log('Sample data already exists or creation failed - continuing...');
   }
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

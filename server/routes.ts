@@ -480,6 +480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const configured = await emailService.configure({ username, password });
       if (configured) {
+        // Save credentials to database for persistence
+        const currentUser = await storage.getUserByUsername('demo_user');
+        if (currentUser) {
+          await storage.updateUser(currentUser.id, {
+            gmailUsername: username,
+            gmailAppPassword: password // In production, this should be encrypted
+          });
+        }
         res.json({ success: true, message: 'Gmail SMTP configured successfully' });
       } else {
         res.status(400).json({ error: 'Failed to configure Gmail SMTP. Please check your credentials.' });
@@ -505,6 +513,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to send test email' });
+    }
+  });
+
+  // Check email configuration status
+  app.get('/api/email/status', async (req, res) => {
+    try {
+      const isConfigured = emailService.isEmailConfigured();
+      const currentUser = await storage.getUserByUsername('demo_user');
+      
+      res.json({ 
+        configured: isConfigured,
+        hasStoredCredentials: !!(currentUser?.gmailUsername && currentUser?.gmailAppPassword)
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to check email configuration status' });
     }
   });
 
