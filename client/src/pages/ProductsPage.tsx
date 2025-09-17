@@ -46,7 +46,7 @@ export default function ProductsPage() {
     onSuccess: () => {
       setShowForm(false);
       setEditingProduct(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (error) => {
       console.error('Error creating product:', error);
@@ -73,7 +73,7 @@ export default function ProductsPage() {
     onSuccess: () => {
       setShowForm(false);
       setEditingProduct(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (error) => {
       console.error('Error updating product:', error);
@@ -88,7 +88,7 @@ export default function ProductsPage() {
       if (!response.ok) throw new Error('Failed to delete product');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
   });
 

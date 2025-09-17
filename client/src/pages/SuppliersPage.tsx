@@ -17,16 +17,13 @@ export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock user ID - in real app this would come from auth
-  const userId = "test-user-1";
-
   useEffect(() => {
     fetchSuppliers();
   }, []);
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch(`/api/suppliers?userId=${userId}`);
+      const response = await fetch('/api/suppliers');
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched suppliers:', data);
@@ -59,7 +56,7 @@ export default function SuppliersPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editingSupplier ? data : { ...data, userId }),
+        body: JSON.stringify(data),
       });
 
       if (response.ok) {

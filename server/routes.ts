@@ -91,10 +91,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/suppliers', async (req, res) => {
     try {
-      const supplierData = insertSupplierSchema.parse(req.body);
+      // Get current demo user for consistent userId
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
+      }
+      
+      const supplierData = insertSupplierSchema.parse({
+        ...req.body,
+        userId: currentUser.id // Use demo user's ID consistently
+      });
+      
       const supplier = await storage.createSupplier(supplierData);
+      console.log(`✅ New supplier created: ${supplier.name} (${supplier.email}) for user ${currentUser.id}`);
       res.json(supplier);
     } catch (error) {
+      console.error('Error creating supplier:', error);
       res.status(400).json({ error: 'Invalid supplier data' });
     }
   });
@@ -154,10 +166,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/products', async (req, res) => {
     try {
-      const productData = insertProductSchema.parse(req.body);
+      // Get current demo user for consistent userId
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
+      }
+
+      const productData = insertProductSchema.parse({
+        ...req.body,
+        userId: currentUser.id // Use demo user's ID consistently
+      });
+      
       const product = await storage.createProduct(productData);
+      console.log(`✅ New product created: ${product.name} (${product.sku}) for user ${currentUser.id}`);
+      
+      // Check if stock alert should be sent immediately
+      if (product.currentStock <= product.minimumQuantity) {
+        console.log(`🔔 Low stock detected for new product: ${product.name}`);
+        
+        if (emailService.isEmailConfigured()) {
+          try {
+            const supplier = await storage.getSupplier(product.supplierId);
+            const user = await storage.getUser(product.userId);
+
+            if (supplier && user && supplier.email && user.senderEmail) {
+              console.log(`📧 Sending low stock alert for new product to ${supplier.email}`);
+              
+              const emailSent = await emailService.sendLowStockAlert(
+                product.name,
+                product.sku,
+                product.currentStock,
+                product.minimumQuantity,
+                supplier.email,
+                user.senderEmail
+              );
+
+              if (emailSent) {
+                await storage.createAlert(product.id, supplier.id, product.userId);
+                console.log(`✅ Low stock alert sent for new product: ${product.name}`);
+              }
+            }
+          } catch (alertError) {
+            console.error('❌ Error sending low stock alert for new product:', alertError);
+          }
+        } else {
+          console.log('⚠️ Email service not configured - cannot send low stock alert for new product');
+        }
+      }
+      
       res.json(product);
     } catch (error) {
+      console.error('Error creating product:', error);
       res.status(400).json({ error: 'Invalid product data' });
     }
   });

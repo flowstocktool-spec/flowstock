@@ -27,16 +27,13 @@ interface ProductFormProps {
 export default function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   
-  // Mock user ID - in real app this would come from auth
-  const userId = "test-user-1";
-
   useEffect(() => {
     fetchSuppliers();
   }, []);
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch(`/api/suppliers?userId=${userId}`);
+      const response = await fetch('/api/suppliers');
       if (response.ok) {
         const data = await response.json();
         setSuppliers(data);

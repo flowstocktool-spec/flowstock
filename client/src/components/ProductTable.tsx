@@ -22,13 +22,10 @@ interface ProductTableProps {
 export default function ProductTable({ onEdit }: ProductTableProps) {
   const queryClient = useQueryClient();
 
-  // Mock user ID - in real app this would come from auth
-  const userId = "test-user-1";
-
   const { data: products = [], isLoading: loading } = useQuery({
-    queryKey: ["/api/products", userId],
+    queryKey: ["/api/products"],
     queryFn: async () => {
-      const response = await fetch(`/api/products?userId=${userId}`);
+      const response = await fetch('/api/products');
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -50,7 +47,7 @@ export default function ProductTable({ onEdit }: ProductTableProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (error) => {
       console.error('Error deleting product:', error);
@@ -91,7 +88,7 @@ export default function ProductTable({ onEdit }: ProductTableProps) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       alert('🚨 Stock updated to 1 - automatic email should be sent if configured!');
     },
     onError: (error) => {
