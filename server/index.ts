@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./database";
 import { testDatabaseConnection } from "./db-test";
+import { createSampleData } from "./db-init";
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,13 @@ app.use((req, res, next) => {
   const dbConnected = await testDatabaseConnection();
   if (!dbConnected) {
     console.error('Failed to connect to database - application may not work correctly');
+  }
+  
+  // Create sample data for demo purposes
+  try {
+    await createSampleData();
+  } catch (error) {
+    console.log('Sample data already exists or creation failed - continuing...');
   }
   
   const server = await registerRoutes(app);
