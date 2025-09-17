@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductTable from "@/components/ProductTable";
 import ProductForm from "@/components/ProductForm";
+import StockUpload from "@/components/StockUpload";
 import { Mail } from "lucide-react";
 
 export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const queryClient = useQueryClient();
 
@@ -17,13 +19,22 @@ export default function ProductsPage() {
   const handleAddProduct = () => {
     console.log('Add product triggered');
     setEditingProduct(null);
+    setShowUpload(false);
     setShowForm(true);
   };
 
   const handleEditProduct = (product: any) => {
     console.log('Edit product triggered:', product.id);
     setEditingProduct(product);
+    setShowUpload(false);
     setShowForm(true);
+  };
+
+  const handleUploadStock = () => {
+    console.log('Upload stock report triggered');
+    setShowForm(false);
+    setEditingProduct(null);
+    setShowUpload(true);
   };
 
   const createMutation = useMutation({
@@ -125,6 +136,10 @@ export default function ProductsPage() {
     setEditingProduct(null);
   };
 
+  const handleUploadCancel = () => {
+    setShowUpload(false);
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -132,10 +147,16 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold" data-testid="heading-products">Products</h1>
           <p className="text-muted-foreground">Manage your product catalog and stock levels</p>
         </div>
-        <Button onClick={handleAddProduct} data-testid="button-add-product-page">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={handleUploadStock} variant="outline" data-testid="button-upload-stock">
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Stock Report
+          </Button>
+          <Button onClick={handleAddProduct} data-testid="button-add-product-page">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {showForm ? (
@@ -145,6 +166,15 @@ export default function ProductsPage() {
             onSubmit={handleFormSubmit} 
             onCancel={handleFormCancel} 
           />
+        </div>
+      ) : showUpload ? (
+        <div className="mb-6">
+          <StockUpload />
+          <div className="mt-4">
+            <Button onClick={handleUploadCancel} variant="outline">
+              Back to Products
+            </Button>
+          </div>
         </div>
       ) : (
         <ProductTable onEdit={handleEditProduct} />

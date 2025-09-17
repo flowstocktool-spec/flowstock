@@ -67,6 +67,13 @@ export default function StockUpload() {
       if (response.ok && result.success) {
         setUploadSummary(result.summary);
         console.log('✅ Upload successful:', result.summary);
+        
+        // Refresh products data after successful upload
+        if (window.location.pathname === '/products') {
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
       } else {
         setError(result.error || 'Upload failed');
         console.error('❌ Upload failed:', result);

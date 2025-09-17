@@ -56,8 +56,8 @@ export default function Dashboard() {
 
   const handleUploadClick = () => {
     console.log('Upload stock report triggered');
-    // Navigate to upload page (you can implement this with your router)
-    window.location.href = '/upload';
+    // Navigate to products page where upload functionality is now located
+    window.location.href = '/products';
   };
 
   const handleAddProduct = () => {
