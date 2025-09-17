@@ -29,7 +29,11 @@ export default function SuppliersPage() {
       const response = await fetch(`/api/suppliers?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched suppliers:', data);
         setSuppliers(data);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to fetch suppliers:', errorData);
       }
     } catch (error) {
       console.error('Failed to fetch suppliers:', error);
@@ -59,14 +63,19 @@ export default function SuppliersPage() {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('Supplier saved successfully:', result);
         setShowForm(false);
         setEditingSupplier(null);
-        fetchSuppliers(); // Refresh the list
+        await fetchSuppliers(); // Refresh the list
       } else {
-        console.error('Failed to save supplier');
+        const errorData = await response.json();
+        console.error('Failed to save supplier:', errorData);
+        alert(`Failed to save supplier: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving supplier:', error);
+      alert(`Error saving supplier: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

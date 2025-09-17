@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Building } from "lucide-react";
+import { Building, Mail } from "lucide-react";
 
 interface SupplierFormProps {
   supplier?: {
@@ -23,6 +24,20 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    if (!formData.name.trim() || !formData.email.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
     console.log('Supplier form submitted:', formData);
     onSubmit?.(formData);
   };
