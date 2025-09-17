@@ -29,13 +29,13 @@ const upload = multer({
 async function sendAutomaticStockAlert(product: any) {
   const isLowStock = product.currentStock <= product.minimumQuantity;
   const isOutOfStock = product.currentStock === 0;
-  
+
   console.log(`\n🔍 AUTO ALERT CHECK:`);
   console.log(`Product: ${product.name} (${product.sku})`);
   console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
   console.log(`Is low stock: ${isLowStock}, Is out of stock: ${isOutOfStock}`);
   console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
-  
+
   if (isLowStock || isOutOfStock) {
     if (!emailService.isEmailConfigured()) {
       console.log('⚠️ Email service not configured - cannot send automatic alerts');
@@ -51,7 +51,7 @@ async function sendAutomaticStockAlert(product: any) {
 
       if (supplier && user && supplier.email && user.senderEmail) {
         console.log(`📧 Sending automatic ${isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'} alert to ${supplier.email}`);
-        
+
         const emailSent = await emailService.sendLowStockAlert(
           product.name,
           product.sku,
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Demo user not found' });
       }
       const suppliers = await storage.getSuppliersByUserId(currentUser.id);
-      
+
       // Enrich suppliers with product count
       const enrichedSuppliers = await Promise.all(
         suppliers.map(async (supplier) => {
@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedSuppliers);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch suppliers' });
@@ -150,12 +150,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!currentUser) {
         return res.status(404).json({ error: 'Demo user not found' });
       }
-      
+
       const supplierData = insertSupplierSchema.parse({
         ...req.body,
         userId: currentUser.id // Use demo user's ID consistently
       });
-      
+
       const supplier = await storage.createSupplier(supplierData);
       console.log(`✅ New supplier created: ${supplier.name} (${supplier.email}) for user ${currentUser.id}`);
       res.json(supplier);
@@ -230,13 +230,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: currentUser.id // Use demo user's ID consistently
       });
-      
+
       const product = await storage.createProduct(productData);
       console.log(`✅ New product created: ${product.name} (${product.sku}) for user ${currentUser.id}`);
-      
+
       // Automatically send alert if the new product is low stock or out of stock
       await sendAutomaticStockAlert(product);
-      
+
       res.json(product);
     } catch (error) {
       console.error('Error creating product:', error);
@@ -336,19 +336,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const updatedProduct = await storage.updateProduct(product.id, {
               currentStock: stockData.currentStock
             });
-            
+
             if (updatedProduct) {
               // Send automatic alert if needed
               const isLowStock = stockData.currentStock <= product.minimumQuantity;
               const isOutOfStock = stockData.currentStock === 0;
-              
+
               if (isLowStock || isOutOfStock) {
                 const supplier = await storage.getSupplier(product.supplierId);
                 const user = await storage.getUser(userId);
 
                 if (supplier && user && supplier.email && user.senderEmail && emailService.isEmailConfigured()) {
                   console.log(`📧 CSV Upload: Sending ${isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'} alert for ${product.name}`);
-                  
+
                   const emailSent = await emailService.sendLowStockAlert(
                     product.name,
                     product.sku,
@@ -450,13 +450,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       // Actually update the user in the database
       const user = await storage.updateUser(id, updates);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       console.log(`✅ User ${id} updated:`, { username: user.username, email: user.email, senderEmail: user.senderEmail });
       res.json(user);
     } catch (error) {
@@ -497,40 +497,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { toEmail, fromEmail } = req.body;
       if (!toEmail || !fromEmail) {
-
-
-  // Get column mapping suggestions for manual review
-  app.post('/api/stock-reports/analyze', upload.single('file'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
-
-      console.log(`🔍 Analyzing file: ${req.file.originalname}`);
-      
-      // Get just the column suggestions without full parsing
-      const parseResult = await intelligentParser.parseFile(req.file.buffer, req.file.originalname);
-      
-      if (!parseResult.success && parseResult.metadata.totalRows === 0) {
-        return res.status(400).json({ 
-          error: 'Unable to analyze file',
-          details: parseResult.errors 
-        });
-      }
-
-      res.json({
-        filename: req.file.originalname,
-        metadata: parseResult.metadata,
-        suggestions: parseResult.metadata.detectedColumns,
-        sampleData: parseResult.data.slice(0, 3), // First 3 rows for preview
-        errors: parseResult.errors
-      });
-    } catch (error) {
-      console.error('❌ File analysis error:', error);
-      res.status(500).json({ error: 'Failed to analyze file' });
-    }
-  });
-
         return res.status(400).json({ error: 'Both toEmail and fromEmail are required' });
       }
 
@@ -550,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const isConfigured = emailService.isEmailConfigured();
       const currentUser = await storage.getUserByUsername('demo_user');
-      
+
       res.json({ 
         configured: isConfigured,
         hasStoredCredentials: !!(currentUser?.gmailUsername && currentUser?.gmailAppPassword)
@@ -573,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { productId } = req.params;
       const product = await storage.getProduct(productId);
-      
+
       if (!product) {
         console.log(`❌ Product not found: ${productId}`);
         return res.status(404).json({ error: 'Product not found' });
@@ -582,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🧪 Testing alert for product: ${product.name} (${product.sku})`);
       console.log(`Current stock: ${product.currentStock}, Minimum: ${product.minimumQuantity}`);
       console.log(`Email service configured: ${emailService.isEmailConfigured()}`);
-      
+
       if (!emailService.isEmailConfigured()) {
         console.log('❌ Email service not configured - please configure Gmail SMTP first');
         return res.status(400).json({ 
@@ -690,6 +656,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    }
+  });
+
+  // Health check endpoint
+  app.get('/api/health', async (req, res) => {
+    try {
+      // Test database connection
+      await storage.getUserById('health-check');
+
+      res.json({ 
+        status: 'ok', 
+        database: 'connected',
+        timestamp: new Date().toISOString() 
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error', 
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString() 
+      });
+    }
+  });
+
+  // Get column mapping suggestions for manual review
+  app.post('/api/stock-reports/analyze', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log(`🔍 Analyzing file: ${req.file.originalname}`);
+
+      // Get just the column suggestions without full parsing
+      const parseResult = await intelligentParser.parseFile(req.file.buffer, req.file.originalname);
+
+      if (!parseResult.success && parseResult.metadata.totalRows === 0) {
+        return res.status(400).json({ 
+          error: 'Unable to analyze file',
+          details: parseResult.errors 
+        });
+      }
+
+      res.json({
+        filename: req.file.originalname,
+        metadata: parseResult.metadata,
+        suggestions: parseResult.metadata.detectedColumns,
+        sampleData: parseResult.data.slice(0, 3), // First 3 rows for preview
+        errors: parseResult.errors
+      });
+    } catch (error) {
+      console.error('❌ File analysis error:', error);
+      res.status(500).json({ error: 'Failed to analyze file' });
     }
   });
 

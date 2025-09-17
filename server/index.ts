@@ -1,11 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { initializeDatabase } from "./database";
 import { testDatabaseConnection } from "./db-test";
-import { createSampleData } from "./db-init";
 import { storage } from "./storage";
 import { emailService } from "./email";
+import { setupDatabase } from "./db-setup";
 
 const app = express();
 app.use(express.json());
@@ -64,8 +63,13 @@ async function restoreEmailConfiguration() {
 }
 
 (async () => {
-  // Initialize database
-  await initializeDatabase();
+  // Initialize database with comprehensive setup
+  const dbSetupSuccess = await setupDatabase();
+
+  if (!dbSetupSuccess) {
+    console.error("❌ Database setup failed - application may not work correctly");
+    process.exit(1);
+  }
 
   // Test database connection
   const dbConnected = await testDatabaseConnection();
@@ -75,7 +79,6 @@ async function restoreEmailConfiguration() {
 
   // Create sample data for demo purposes
   try {
-    await createSampleData();
     // Restore email configuration after database is ready
     await restoreEmailConfiguration();
   } catch (error) {

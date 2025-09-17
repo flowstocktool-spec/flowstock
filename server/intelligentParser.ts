@@ -1,6 +1,5 @@
-
 import * as XLSX from 'xlsx';
-import * as csv from 'csv-parser';
+import csv from 'csv-parser';
 import { Readable } from 'stream';
 
 interface ParsedStockData {
@@ -104,9 +103,9 @@ export class IntelligentStockParser {
     try {
       const fileFormat = this.detectFileFormat(filename);
       console.log(`🔍 Detected file format: ${fileFormat}`);
-      
+
       let rawData: any[];
-      
+
       switch (fileFormat) {
         case 'excel':
           rawData = await this.parseExcelFile(fileBuffer);
@@ -140,7 +139,7 @@ export class IntelligentStockParser {
       const headers = Object.keys(rawData[0]).map(h => h.toLowerCase().trim());
       const platformDetection = this.detectPlatform(headers);
       const columnMapping = this.detectColumns(headers);
-      
+
       console.log(`🎯 Detected platform: ${platformDetection.platform} (${platformDetection.confidence})`);
       console.log(`📋 Column mapping:`, columnMapping);
 
@@ -152,7 +151,7 @@ export class IntelligentStockParser {
         try {
           const row = rawData[i];
           const parsedRow = this.parseDataRow(row, columnMapping, platformDetection.platform);
-          
+
           if (parsedRow) {
             parsedData.push(parsedRow);
           } else {
@@ -197,7 +196,7 @@ export class IntelligentStockParser {
 
   private detectFileFormat(filename: string): string {
     const ext = filename.toLowerCase().split('.').pop() || '';
-    
+
     if (['xlsx', 'xls'].includes(ext)) {
       return 'excel';
     } else if (ext === 'csv') {
@@ -205,7 +204,7 @@ export class IntelligentStockParser {
     } else if (['txt', 'tsv'].includes(ext)) {
       return 'csv'; // Treat as CSV with different delimiter
     }
-    
+
     return 'unknown';
   }
 
@@ -214,7 +213,7 @@ export class IntelligentStockParser {
       const workbook = XLSX.read(buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      
+
       // Convert to JSON with header row
       const jsonData = XLSX.utils.sheet_to_json(worksheet, {
         header: 1,
@@ -229,7 +228,7 @@ export class IntelligentStockParser {
       // Convert array format to object format
       const headers = jsonData[0] as string[];
       const dataRows = jsonData.slice(1) as any[][];
-      
+
       return dataRows.map(row => {
         const obj: any = {};
         headers.forEach((header, index) => {
@@ -246,15 +245,15 @@ export class IntelligentStockParser {
     return new Promise((resolve, reject) => {
       const results: any[] = [];
       const content = buffer.toString('utf-8');
-      
+
       // Auto-detect delimiter
       const delimiter = this.detectDelimiter(content);
       console.log(`🔍 Detected CSV delimiter: "${delimiter}"`);
-      
+
       const stream = Readable.from([content]);
-      
+
       stream
-        .pipe(csv({ 
+        .pipe(csv({
           separator: delimiter,
           skipEmptyLines: true,
           headers: true
@@ -270,7 +269,7 @@ export class IntelligentStockParser {
     const delimiters = [',', ';', '\t', '|'];
     let maxCount = 0;
     let bestDelimiter = ',';
-    
+
     for (const delimiter of delimiters) {
       const count = (firstLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
       if (count > maxCount) {
@@ -278,41 +277,41 @@ export class IntelligentStockParser {
         bestDelimiter = delimiter;
       }
     }
-    
+
     return bestDelimiter;
   }
 
   private detectPlatform(headers: string[]): { platform: string; confidence: number } {
     let bestMatch = { platform: 'generic', confidence: 0 };
-    
+
     for (const [platform, config] of Object.entries(this.platformPatterns)) {
       let matches = 0;
-      
+
       for (const indicator of config.indicators) {
         if (headers.some(h => h.includes(indicator.toLowerCase()))) {
           matches++;
         }
       }
-      
+
       const confidence = (matches / config.indicators.length) * config.confidence;
-      
+
       if (confidence > bestMatch.confidence) {
         bestMatch = { platform, confidence };
       }
     }
-    
+
     return bestMatch;
   }
 
   private detectColumns(headers: string[]): Record<string, string> {
     const mapping: Record<string, string> = {};
-    
+
     for (const [field, possibleNames] of Object.entries(this.columnMappings)) {
       for (const header of headers) {
         const normalizedHeader = header.toLowerCase().trim();
-        
-        if (possibleNames.some(name => 
-          normalizedHeader === name.toLowerCase() || 
+
+        if (possibleNames.some(name =>
+          normalizedHeader === name.toLowerCase() ||
           normalizedHeader.includes(name.toLowerCase()) ||
           name.toLowerCase().includes(normalizedHeader)
         )) {
@@ -321,53 +320,53 @@ export class IntelligentStockParser {
         }
       }
     }
-    
+
     return mapping;
   }
 
   private parseDataRow(row: any, columnMapping: Record<string, string>, platform: string): ParsedStockData | null {
     const skuColumn = columnMapping.sku;
     const stockColumn = columnMapping.stock;
-    
+
     if (!skuColumn || !stockColumn) {
       return null;
     }
-    
+
     const sku = this.cleanValue(row[skuColumn]);
     const stockStr = this.cleanValue(row[stockColumn]);
-    
+
     if (!sku) {
       return null;
     }
-    
+
     // Parse stock with intelligent number extraction
     const stock = this.parseNumber(stockStr);
     if (stock === null || stock < 0) {
       return null;
     }
-    
+
     const result: ParsedStockData = {
       sku: sku.toUpperCase(),
       currentStock: stock,
       platform
     };
-    
+
     // Add optional fields if available
     if (columnMapping.name) {
       const name = this.cleanValue(row[columnMapping.name]);
       if (name) result.name = name;
     }
-    
+
     if (columnMapping.price) {
       const price = this.parseNumber(row[columnMapping.price]);
       if (price !== null && price >= 0) result.price = price;
     }
-    
+
     if (columnMapping.category) {
       const category = this.cleanValue(row[columnMapping.category]);
       if (category) result.category = category;
     }
-    
+
     return result;
   }
 
@@ -378,14 +377,14 @@ export class IntelligentStockParser {
 
   private parseNumber(value: any): number | null {
     if (value === null || value === undefined || value === '') return null;
-    
+
     const str = String(value).trim();
-    
+
     // Remove common non-numeric characters but keep decimal points
     const cleaned = str.replace(/[^0-9.-]/g, '');
-    
+
     if (!cleaned) return null;
-    
+
     const num = parseFloat(cleaned);
     return isNaN(num) ? null : Math.floor(num); // Floor for stock quantities
   }
@@ -393,27 +392,27 @@ export class IntelligentStockParser {
   // Method to get suggested column mappings for manual review
   getSuggestedMappings(headers: string[]): Record<string, string[]> {
     const suggestions: Record<string, string[]> = {};
-    
+
     for (const [field, possibleNames] of Object.entries(this.columnMappings)) {
       const matches: string[] = [];
-      
+
       for (const header of headers) {
         const normalizedHeader = header.toLowerCase().trim();
-        
+
         for (const name of possibleNames) {
-          if (normalizedHeader.includes(name.toLowerCase()) || 
+          if (normalizedHeader.includes(name.toLowerCase()) ||
               name.toLowerCase().includes(normalizedHeader)) {
             matches.push(header);
             break;
           }
         }
       }
-      
+
       if (matches.length > 0) {
         suggestions[field] = matches;
       }
     }
-    
+
     return suggestions;
   }
 }
