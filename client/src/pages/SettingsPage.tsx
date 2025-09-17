@@ -341,7 +341,7 @@ export default function SettingsPage() {
                   data-testid="button-demo-config"
                 >
                   <TestTube className="mr-2 h-4 w-4" />
-                  Demo Setup
+                  Demo (Not Available)
                 </Button>
               </div>
             </div>

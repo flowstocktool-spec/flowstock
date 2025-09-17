@@ -451,30 +451,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Demo email configuration for testing
   app.post('/api/email/configure-demo', async (req, res) => {
-    try {
-      // Use a test Gmail account for demonstration
-      const demoConfig = {
-        username: 'stockalertdemo@gmail.com', // You can replace with your test email
-        password: 'demo-app-password-here'     // You'll need to generate this
-      };
-      
-      console.log('🧪 Configuring demo email service...');
-      const configured = await emailService.configure(demoConfig);
-      
-      if (configured) {
-        console.log('✅ Demo email service configured successfully');
-        res.json({ 
-          success: true, 
-          message: 'Demo email service configured successfully',
-          configured: emailService.isEmailConfigured()
-        });
-      } else {
-        res.status(400).json({ error: 'Failed to configure demo email service' });
-      }
-    } catch (error) {
-      console.error('Demo email configuration error:', error);
-      res.status(500).json({ error: 'Failed to configure demo email service' });
-    }
+    res.status(400).json({ 
+      error: 'Demo email is not available. Please configure your own Gmail SMTP credentials.',
+      message: 'Use your Gmail address and App Password in the Gmail SMTP Configuration section above.'
+    });
   });
 
   // Test low stock alert endpoint
