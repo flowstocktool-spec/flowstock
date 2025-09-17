@@ -99,7 +99,7 @@ export default function SettingsPage() {
   });
 
   const saveUserMutation = useMutation({
-    mutationFn: async (userData: { username: string; email: string; senderEmail: string }) => {
+    mutationFn: async (userData: { email: string; senderEmail: string }) => {
       if (!currentUser?.id) {
         throw new Error('User not found');
       }
@@ -127,7 +127,6 @@ export default function SettingsPage() {
   const handleSave = (section: string) => {
     if (section === 'profile') {
       saveUserMutation.mutate({
-        username: settings.username,
         email: settings.email,
         senderEmail: settings.senderEmail,
       });
@@ -236,9 +235,13 @@ export default function SettingsPage() {
               <Input
                 id="username"
                 value={settings.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
+                readOnly
+                className="bg-muted"
                 data-testid="input-username"
               />
+              <p className="text-sm text-muted-foreground">
+                Username cannot be changed in demo mode
+              </p>
             </div>
 
             <div className="space-y-2">
