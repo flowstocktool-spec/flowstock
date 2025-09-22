@@ -321,9 +321,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let productsCreated = 0;
       let productsUpdated = 0;
 
-      // Get suppliers for the user first
-      const suppliers = await storage.getSuppliersByUserId(userId);
+      // Get suppliers for the user first, create default if none exist
+      let suppliers = await storage.getSuppliersByUserId(userId);
       console.log(`📋 Found ${suppliers.length} suppliers for user ${userId}`);
+
+      // If no suppliers exist, create a default "System" supplier
+      if (suppliers.length === 0) {
+        console.log('📦 No suppliers found - creating default system supplier');
+        try {
+          const defaultSupplier = await storage.createSupplier({
+            name: 'System Import',
+            email: 'system@example.com',
+            userId: userId
+          });
+          suppliers = [defaultSupplier];
+          console.log(`✅ Created default supplier: ${defaultSupplier.name} (${defaultSupplier.id})`);
+        } catch (error) {
+          console.error('❌ Failed to create default supplier:', error);
+          alertErrors.push('Failed to create default supplier for product import');
+        }
+      }
 
       // Process each product individually for reliable updates
       let updatedCount = 0;
@@ -352,28 +369,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             console.log(`➕ Creating new product: ${stockData.sku}`);
-            // Create new product if not found
-            if (suppliers.length > 0) {
-              const defaultSupplier = suppliers[0]; // Use first available supplier
-              
-              const newProduct = await storage.createProduct({
-                sku: stockData.sku,
-                name: stockData.name || stockData.sku,
-                currentStock: stockData.currentStock,
-                minimumQuantity: 10,
-                supplierId: defaultSupplier.id,
-                userId
-              });
-              
-              if (newProduct) {
-                updatedCount++;
-                productsCreated++;
-                console.log(`✅ Created product: ${stockData.sku} -> stock: ${stockData.currentStock}`);
-                await sendAutomaticStockAlert(newProduct);
-              }
-            } else {
-              console.log(`❌ Cannot create product ${stockData.sku}: No suppliers found`);
-              alertErrors.push(`Cannot create product ${stockData.sku}: No suppliers found for user. Please create at least one supplier first.`);
+            // Create new product using first available supplier (now guaranteed to exist)
+            const defaultSupplier = suppliers[0];
+            
+            const newProduct = await storage.createProduct({
+              sku: stockData.sku,
+              name: stockData.name || stockData.sku,
+              currentStock: stockData.currentStock,
+              minimumQuantity: 10,
+              supplierId: defaultSupplier.id,
+              userId
+            });
+            
+            if (newProduct) {
+              updatedCount++;
+              productsCreated++;
+              console.log(`✅ Created product: ${stockData.sku} -> stock: ${stockData.currentStock}`);
+              await sendAutomaticStockAlert(newProduct);
             }
           }
         } catch (error) {
