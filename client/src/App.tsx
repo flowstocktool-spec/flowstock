@@ -90,11 +90,12 @@ function AuthenticatedLayout() {
                     size="sm"
                     onClick={logout}
                     data-testid="button-logout"
+                    className="min-h-[44px] px-3"
                   >
                     <LogOut className="h-4 w-4 mr-1" />
                     Logout
                   </Button>
-                  <ThemeToggle />
+                  <ThemeToggle className="min-h-[44px] min-w-[44px]" />
                 </div>
               </div>
             </header>
