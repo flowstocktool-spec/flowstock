@@ -13,8 +13,8 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null);
   const queryClient = useQueryClient();
 
-  // Mock user ID - in real app this would come from auth
-  const userId = "test-user-1";
+  // Get current demo user ID consistently
+  const userId = "demo-user";
 
   const handleAddProduct = () => {
     console.log('Add product triggered');

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ export default function StockUpload() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       handleFileSelect(files[0]);
@@ -51,23 +50,23 @@ export default function StockUpload() {
     setIsProcessing(true);
     setError(null);
     setUploadSummary(null);
-    
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('userId', 'test-user-1'); // This should be dynamic in production
-    
+      formData.append('file', file);
+      // userId will be determined by server using demo user
+
     try {
       const response = await fetch('/api/stock-reports/upload', {
         method: 'POST',
         body: formData,
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         setUploadSummary(result.summary);
         console.log('✅ Upload successful:', result.summary);
-        
+
         // Refresh products data after successful upload
         if (window.location.pathname === '/products') {
           setTimeout(() => {
@@ -146,7 +145,7 @@ export default function StockUpload() {
                 <p className="text-lg font-medium text-green-600">Analysis Complete!</p>
                 <p className="text-sm text-muted-foreground">{uploadedFile?.name}</p>
               </div>
-              
+
               {/* Platform Detection */}
               <div className="bg-muted p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
@@ -159,7 +158,7 @@ export default function StockUpload() {
                   <strong className="capitalize">{uploadSummary.detectedPlatform}</strong>
                   <span className="text-sm text-muted-foreground">({uploadSummary.fileFormat.toUpperCase()})</span>
                 </div>
-                
+
                 {/* Column Mappings */}
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {Object.entries(uploadSummary.detectedColumns).map(([field, column]) => (
@@ -187,7 +186,7 @@ export default function StockUpload() {
                     <span className="font-medium">{uploadSummary.updatedProducts}</span>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Alerts Sent:</span>
@@ -217,7 +216,7 @@ export default function StockUpload() {
                   </div>
                 </details>
               )}
-              
+
               <Button onClick={resetUpload} variant="outline" data-testid="button-upload-another">
                 Upload Another File
               </Button>
@@ -242,7 +241,7 @@ export default function StockUpload() {
                   Supports CSV, Excel files from any e-commerce platform
                 </p>
               </div>
-              
+
               {/* Supported Platforms */}
               <div className="flex flex-wrap justify-center gap-2 mb-4">
                 {['Amazon', 'Shopify', 'eBay', 'Etsy', 'WooCommerce', 'Magento'].map(platform => (
@@ -251,7 +250,7 @@ export default function StockUpload() {
                   </Badge>
                 ))}
               </div>
-              
+
               <div className="flex gap-4 justify-center">
                 <Button asChild data-testid="button-browse-files">
                   <label>
@@ -280,13 +279,13 @@ export default function StockUpload() {
             <h3 className="font-medium text-blue-800">Auto Platform Detection</h3>
             <p className="text-xs text-blue-600">Identifies Amazon, Shopify, eBay, and more</p>
           </div>
-          
+
           <div className="text-center p-4 bg-green-50 rounded-lg">
             <Zap className="h-8 w-8 mx-auto mb-2 text-green-600" />
             <h3 className="font-medium text-green-800">Smart Column Mapping</h3>
             <p className="text-xs text-green-600">Automatically finds SKU, stock, and price columns</p>
           </div>
-          
+
           <div className="text-center p-4 bg-purple-50 rounded-lg">
             <CheckCircle className="h-8 w-8 mx-auto mb-2 text-purple-600" />
             <h3 className="font-medium text-purple-800">Format Flexibility</h3>

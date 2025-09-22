@@ -281,10 +281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const userId = req.body.userId;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+      // Get current demo user for consistent userId
+      const currentUser = await storage.getUserByUsername('demo_user');
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Demo user not found' });
       }
+      const userId = currentUser.id;
 
       // Create stock report record
       const reportData = {
