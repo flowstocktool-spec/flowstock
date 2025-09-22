@@ -62,12 +62,12 @@ export default function LandingPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Smart Inventory Management
-            <span className="text-blue-600"> Simplified</span>
+            Inventory Management Without the
+            <span className="text-blue-600"> ERP Complexity</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            Keep track of your inventory across multiple platforms with automated alerts, 
-            easy CSV uploads, and intelligent stock monitoring.
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+            Small and medium businesses struggle with costly ERPs, complex setups, and steep learning curves. 
+            Flowstock delivers cloud-based inventory management with automatic supplier alerts - simple, affordable, and ready to use.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
@@ -79,9 +79,6 @@ export default function LandingPage() {
               Try for Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No credit card required • Free forever
-            </p>
           </div>
         </div>
       </section>
@@ -123,10 +120,10 @@ export default function LandingPage() {
             </h2>
             <div className="space-y-4">
               {[
-                "Upload inventory data from any platform instantly",
-                "Never run out of stock with smart automated alerts",
-                "Manage multiple suppliers in one organized dashboard",
-                "Simple, intuitive interface that anyone can use"
+                "No ERP setup required - works instantly in your browser",
+                "Zero learning curve with intuitive user-friendly interface",
+                "Cloud-based SaaS - access anywhere, no installation needed",
+                "Affordable pricing designed for small and medium businesses"
               ].map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3 text-left">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -153,7 +150,7 @@ export default function LandingPage() {
             className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6"
             data-testid="button-cta-try-free"
           >
-            Get Started - It's Free
+            Try for Free
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
