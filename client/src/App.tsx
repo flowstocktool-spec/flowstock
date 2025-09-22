@@ -14,6 +14,7 @@ const ProductsPage = lazy(() => import("@/pages/ProductsPage"));
 const SuppliersPage = lazy(() => import("@/pages/SuppliersPage"));
 const UploadPage = lazy(() => import("@/pages/UploadPage"));
 const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
+const UserGuidePage = lazy(() => import("@/pages/UserGuidePage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/suppliers" component={SuppliersPage} />
         <Route path="/upload" component={UploadPage} />
         <Route path="/alerts" component={AlertsPage} />
+        <Route path="/guide" component={UserGuidePage} />
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>

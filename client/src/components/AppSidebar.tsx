@@ -15,7 +15,8 @@ import {
   Users, 
   Upload, 
   Settings,
-  Bell
+  Bell,
+  BookOpen
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -44,6 +45,11 @@ const menuItems = [
     title: "Alerts",
     url: "/alerts",
     icon: Bell,
+  },
+  {
+    title: "User Guide",
+    url: "/guide",
+    icon: BookOpen,
   },
   {
     title: "Settings",
