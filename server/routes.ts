@@ -321,15 +321,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let productsCreated = 0;
       let productsUpdated = 0;
 
+      // Get suppliers for the user first
+      const suppliers = await storage.getSuppliersByUserId(userId);
+      console.log(`📋 Found ${suppliers.length} suppliers for user ${userId}`);
+
       // Process each product individually for reliable updates
       let updatedCount = 0;
 
       for (const stockData of parseResult.data) {
         try {
+          console.log(`🔄 Processing product: ${stockData.sku} (stock: ${stockData.currentStock})`);
+          
           // First, try to find existing product by SKU
           const existingProduct = await storage.getProductBySku(userId, stockData.sku);
           
           if (existingProduct) {
+            console.log(`📝 Updating existing product: ${stockData.sku}`);
             // Update existing product
             const updatedProduct = await storage.updateProduct(existingProduct.id, {
               currentStock: stockData.currentStock,
@@ -339,15 +346,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (updatedProduct) {
               updatedCount++;
               productsUpdated++;
+              console.log(`✅ Updated product: ${stockData.sku} -> stock: ${stockData.currentStock}`);
               // Send automatic alert if needed
               await sendAutomaticStockAlert(updatedProduct);
             }
           } else {
+            console.log(`➕ Creating new product: ${stockData.sku}`);
             // Create new product if not found
-            const suppliers = await storage.getSuppliersByUserId(userId);
-            const defaultSupplier = suppliers[0]; // Use first available supplier
-            
-            if (defaultSupplier) {
+            if (suppliers.length > 0) {
+              const defaultSupplier = suppliers[0]; // Use first available supplier
+              
               const newProduct = await storage.createProduct({
                 sku: stockData.sku,
                 name: stockData.name || stockData.sku,
@@ -360,13 +368,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (newProduct) {
                 updatedCount++;
                 productsCreated++;
+                console.log(`✅ Created product: ${stockData.sku} -> stock: ${stockData.currentStock}`);
                 await sendAutomaticStockAlert(newProduct);
               }
             } else {
-              alertErrors.push(`Cannot create product ${stockData.sku}: No suppliers found for user`);
+              console.log(`❌ Cannot create product ${stockData.sku}: No suppliers found`);
+              alertErrors.push(`Cannot create product ${stockData.sku}: No suppliers found for user. Please create at least one supplier first.`);
             }
           }
         } catch (error) {
+          console.error(`❌ Error processing ${stockData.sku}:`, error);
           alertErrors.push(`Error processing ${stockData.sku}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
