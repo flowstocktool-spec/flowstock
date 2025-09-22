@@ -72,7 +72,7 @@ export default function LoginPage() {
             Welcome Back
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Sign in to your StockAlert Pro account
+            Sign in to your Flowstock account
           </p>
         </div>
 

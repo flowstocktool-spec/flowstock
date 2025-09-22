@@ -21,6 +21,9 @@ const UserGuidePage = lazy(() => import("@/pages/UserGuidePage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
+// Public pages
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+
 // Authentication pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
@@ -31,7 +34,7 @@ function AuthenticatedRouter() {
   return (
     <Suspense fallback={<div className="p-6 text-center" data-testid="status-loading-app">Loading...</div>}>
       <Switch>
-        <Route path="/" component={DashboardPage} />
+        <Route path="/dashboard" component={DashboardPage} />
         <Route path="/products" component={ProductsPage} />
         <Route path="/suppliers" component={SuppliersPage} />
         <Route path="/upload" component={UploadPage} />
@@ -48,11 +51,12 @@ function UnauthenticatedRouter() {
   return (
     <Suspense fallback={<div className="p-6 text-center" data-testid="status-loading-auth">Loading...</div>}>
       <Switch>
+        <Route path="/" component={LandingPage} />
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
-        <Route component={LoginPage} /> {/* Default to login for unauthenticated users */}
+        <Route component={LandingPage} /> {/* Default to landing page for unauthenticated users */}
       </Switch>
     </Suspense>
   );
@@ -75,7 +79,7 @@ function AuthenticatedLayout() {
             <header className="flex items-center justify-between p-4 border-b bg-background">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <div className="flex items-center gap-4">
-                <span className="text-lg font-semibold">StockAlert Pro</span>
+                <span className="text-lg font-semibold">Flowstock</span>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <User className="h-4 w-4" />

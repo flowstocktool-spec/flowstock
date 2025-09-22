@@ -50,9 +50,9 @@ export default function RegisterPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Account created successfully!",
-        description: "Welcome to StockAlert Pro. You have been automatically logged in.",
+        description: "Welcome to Flowstock. You have been automatically logged in.",
       });
-      navigate("/");
+      navigate("/dashboard");
     },
     onError: (error: Error) => {
       toast({
@@ -83,7 +83,7 @@ export default function RegisterPage() {
             Create Account
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Get started with StockAlert Pro today
+            Get started with Flowstock today
           </p>
         </div>
 

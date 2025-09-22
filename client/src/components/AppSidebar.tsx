@@ -9,11 +9,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { 
-  BarChart3, 
-  Package, 
-  Users, 
-  Upload, 
+import {
+  BarChart3,
+  Package,
+  Users,
+  Upload,
   Settings,
   Bell,
   BookOpen
@@ -23,17 +23,17 @@ import { useLocation } from "wouter";
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: "Products", 
+    title: "Products",
     url: "/products",
     icon: Package,
   },
   {
     title: "Suppliers",
-    url: "/suppliers", 
+    url: "/suppliers",
     icon: Users,
   },
   {
@@ -70,7 +70,7 @@ export default function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
+                  <SidebarMenuButton
                     asChild
                     isActive={location === item.url}
                     data-testid={`link-sidebar-${item.title.toLowerCase().replace(' ', '-')}`}
