@@ -11,7 +11,7 @@ import { Mail } from "lucide-react";
 export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Get current demo user ID consistently
@@ -194,17 +194,17 @@ export default function ProductsPage() {
         </Card>
       </div>
 
-      <div className="mb-6 flex items-center justify-between" style={{ display: 'none' }}>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold" data-testid="heading-products">Products</h1>
           <p className="text-muted-foreground">Manage your product catalog and stock levels</p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={handleUploadStock} variant="outline" data-testid="button-upload-stock">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button onClick={handleUploadStock} variant="outline" data-testid="button-upload-stock" className="min-h-[44px] px-4">
             <Upload className="mr-2 h-4 w-4" />
             Upload Stock Report
           </Button>
-          <Button onClick={handleAddProduct} data-testid="button-add-product-page">
+          <Button onClick={handleAddProduct} data-testid="button-add-product-page" className="min-h-[44px] px-4">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>

@@ -73,11 +73,11 @@ function AuthenticatedLayout() {
   return (
     <TooltipProvider>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
+        <div className="flex min-h-svh w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1">
             <header className="flex items-center justify-between p-4 border-b bg-background">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="min-h-[44px] min-w-[44px] p-2" aria-label="Toggle sidebar" />
               <div className="flex items-center gap-4">
                 <span className="text-lg font-semibold">Flowstock</span>
                 <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-svh bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground" data-testid="status-loading-auth">Loading...</p>
