@@ -1,5 +1,4 @@
-
-# 📚 StockAlert Pro User Guide
+# 📚 Flowstock User Guide
 
 ## Table of Contents
 1. [Dashboard](#dashboard)
@@ -334,7 +333,7 @@ This is crucial for automated alerts to work properly.
 4. Scroll down and click "App passwords"
 5. Select "Mail" and your device
 6. Google will generate a 16-character password
-7. Use this password in the StockAlert Pro settings
+7. Use this password in the Flowstock settings
 
 ---
 

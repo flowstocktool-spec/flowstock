@@ -1,7 +1,7 @@
 
 # 🚀 Quick Start Guide
 
-Get StockAlert Pro running in under 5 minutes!
+Get Flowstock running in under 5 minutes!
 
 ## Step 1: Set up Database
 1. Click **"Database"** tab in Replit

@@ -51,7 +51,7 @@ export default function App() {
               <header className="flex items-center justify-between p-4 border-b bg-background">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
                 <div className="flex items-center gap-4">
-                  <span className="text-lg font-semibold">StockAlert Pro</span>
+                  <span className="text-lg font-semibold">Flowstock</span>
                   <ThemeToggle />
                 </div>
               </header>

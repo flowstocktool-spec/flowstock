@@ -1,5 +1,5 @@
 
-# StockAlert Pro - Inventory Management System
+# Flowstock - Inventory Management System
 
 A comprehensive inventory management system for e-commerce sellers with automated stock alerts and supplier notifications.
 

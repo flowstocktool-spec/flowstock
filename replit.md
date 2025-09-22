@@ -1,7 +1,7 @@
-# StockAlert Pro - Inventory Management Tool
+# Flowstock - Inventory Management Tool
 
 ## Overview
-StockAlert Pro is a stock alerts and forecasting tool designed for e-commerce sellers managing inventory across multiple platforms. The application automatically monitors stock levels and sends email notifications to suppliers when products are running low.
+Flowstock is a stock alerts and forecasting tool designed for e-commerce sellers managing inventory across multiple platforms. The application automatically monitors stock levels and sends email notifications to suppliers when products are running low.
 
 ## Architecture
 - **Frontend**: React + TypeScript with Tailwind CSS and Shadcn UI components
