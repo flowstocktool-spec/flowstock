@@ -25,7 +25,7 @@ export default function UserGuidePage() {
           <BookOpen className="h-8 w-8" />
           User Guide
         </h1>
-        <p className="text-muted-foreground">Complete guide to using StockAlert Pro effectively</p>
+        <p className="text-muted-foreground">Complete guide to using Flowstock effectively</p>
       </div>
 
       <div className="space-y-8">

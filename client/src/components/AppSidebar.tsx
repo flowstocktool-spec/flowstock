@@ -65,7 +65,7 @@ export default function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>StockAlert Pro</SidebarGroupLabel>
+          <SidebarGroupLabel>Flowstock</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (

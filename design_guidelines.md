@@ -1,4 +1,4 @@
-# Stock Alerts Tool Design Guidelines
+# Flowstock Design Guidelines
 
 ## Design Approach: Design System Approach (Material Design)
 **Justification**: This is a utility-focused productivity tool where efficiency, clarity, and learnability are paramount. The application handles data-dense content (product lists, stock levels, supplier information) and requires standard UI patterns for optimal user experience.

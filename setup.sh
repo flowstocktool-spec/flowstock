@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up StockAlert Pro for production deployment..."
+echo "🚀 Setting up Flowstock for production deployment..."
 
 # Install dependencies
 echo "📦 Installing dependencies..."
