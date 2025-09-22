@@ -16,7 +16,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "@shared/schema";
-import { authService, type AuthenticatedRequest } from "./auth";
+import { authService, requireAuth, getCurrentUser, type AuthenticatedRequest } from "./auth";
 
 // Configure multer for file uploads with enhanced format support
 const upload = multer({
@@ -86,6 +86,16 @@ async function sendAutomaticStockAlert(product: any) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
+  app.get('/api/auth/me', requireAuth, getCurrentUser, (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    // Return user without password
+    const { password, gmailAppPassword, resetPasswordToken, resetPasswordExpires, ...userWithoutSensitiveData } = req.user;
+    res.json(userWithoutSensitiveData);
+  });
+
   app.post('/api/auth/register', async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
@@ -165,24 +175,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', async (req: AuthenticatedRequest, res) => {
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    try {
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch user' });
-    }
-  });
 
   // User routes
   app.post('/api/users', async (req, res) => {
@@ -209,27 +201,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Get current user (demo user for now)
-  app.get('/api/user/current', async (req, res) => {
-    try {
-      const user = await storage.getUserByUsername('demo_user');
-      if (!user) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch current user' });
+  app.get('/api/user/current', requireAuth, getCurrentUser, (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+    res.json(req.user);
   });
 
   // Supplier routes
-  app.get('/api/suppliers', async (req, res) => {
+  app.get('/api/suppliers', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get current user ID from demo user
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-      const suppliers = await storage.getSuppliersByUserId(currentUser.id);
+      const suppliers = await storage.getSuppliersByUserId(req.userId!);
 
       // Enrich suppliers with product count
       const enrichedSuppliers = await Promise.all(
@@ -248,21 +230,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/suppliers', async (req, res) => {
+  app.post('/api/suppliers', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get current demo user for consistent userId
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-
       const supplierData = insertSupplierSchema.parse({
         ...req.body,
-        userId: currentUser.id // Use demo user's ID consistently
+        userId: req.userId // Use authenticated user's ID
       });
 
       const supplier = await storage.createSupplier(supplierData);
-      console.log(`✅ New supplier created: ${supplier.name} (${supplier.email}) for user ${currentUser.id}`);
+      console.log(`✅ New supplier created: ${supplier.name} (${supplier.email}) for user ${req.userId}`);
       res.json(supplier);
     } catch (error) {
       console.error('Error creating supplier:', error);
@@ -270,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/suppliers/:id', async (req, res) => {
+  app.put('/api/suppliers/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const updates = req.body;
       const supplier = await storage.updateSupplier(req.params.id, updates);
@@ -283,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/suppliers/:id', async (req, res) => {
+  app.delete('/api/suppliers/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const deleted = await storage.deleteSupplier(req.params.id);
       if (!deleted) {
@@ -296,14 +272,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product routes
-  app.get('/api/products', async (req, res) => {
+  app.get('/api/products', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get current user ID from demo user
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-      const products = await storage.getProductsByUserId(currentUser.id);
+      const products = await storage.getProductsByUserId(req.userId!);
 
       // Enrich products with supplier information
       const enrichedProducts = await Promise.all(
@@ -323,21 +294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products', async (req, res) => {
+  app.post('/api/products', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get current demo user for consistent userId
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-
       const productData = insertProductSchema.parse({
         ...req.body,
-        userId: currentUser.id // Use demo user's ID consistently
+        userId: req.userId // Use authenticated user's ID
       });
 
       const product = await storage.createProduct(productData);
-      console.log(`✅ New product created: ${product.name} (${product.sku}) for user ${currentUser.id}`);
+      console.log(`✅ New product created: ${product.name} (${product.sku}) for user ${req.userId}`);
 
       // Automatically send alert if the new product is low stock or out of stock
       await sendAutomaticStockAlert(product);
@@ -349,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/products/:id', async (req, res) => {
+  app.put('/api/products/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const updates = req.body;
       const product = await storage.updateProduct(req.params.id, updates);
@@ -366,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/products/:id', async (req, res) => {
+  app.delete('/api/products/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const deleted = await storage.deleteProduct(req.params.id);
       if (!deleted) {
@@ -379,18 +344,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stock report upload and processing
-  app.post('/api/stock-reports/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/stock-reports/upload', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Get current demo user for consistent userId
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-      const userId = currentUser.id;
+      const userId = req.userId!;
 
       // Create stock report record
       const reportData = {
@@ -526,13 +486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/stock-reports', async (req, res) => {
+  app.get('/api/stock-reports', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
-      }
-      const reports = await storage.getStockReportsByUserId(userId);
+      const reports = await storage.getStockReportsByUserId(req.userId!);
       res.json(reports);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch stock reports' });
@@ -540,13 +496,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alert routes
-  app.get('/api/alerts', async (req, res) => {
+  app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
-      }
-      const alerts = await storage.getAlertsByUserId(userId);
+      const alerts = await storage.getAlertsByUserId(req.userId!);
 
       // Enrich alerts with product and supplier information
       const enrichedAlerts = await Promise.all(
@@ -570,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save user settings (including sender email) - this replaces the duplicate route above
-  app.put('/api/users/:id', async (req, res) => {
+  app.put('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -590,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email configuration (simplified, per-user)
-  app.post('/api/email/configure', async (req, res) => {
+  app.post('/api/email/configure', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
@@ -600,13 +552,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const configured = await emailService.configure({ username, password });
       if (configured) {
         // Save credentials to database for persistence
-        const currentUser = await storage.getUserByUsername('demo_user');
-        if (currentUser) {
-          await storage.updateUser(currentUser.id, {
-            gmailUsername: username,
-            gmailAppPassword: password // In production, this should be encrypted
-          });
-        }
+        await storage.updateUser(req.userId!, {
+          gmailUsername: username,
+          gmailAppPassword: password // In production, this should be encrypted
+        });
         res.json({ success: true, message: 'Gmail SMTP configured successfully' });
       } else {
         res.status(400).json({ error: 'Failed to configure Gmail SMTP. Please check your credentials.' });
@@ -636,14 +585,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check email configuration status
-  app.get('/api/email/status', async (req, res) => {
+  app.get('/api/email/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const isConfigured = emailService.isEmailConfigured();
-      const currentUser = await storage.getUserByUsername('demo_user');
+      const userFromDb = await storage.getUser(req.userId!);
 
       res.json({ 
         configured: isConfigured,
-        hasStoredCredentials: !!(currentUser?.gmailUsername && currentUser?.gmailAppPassword)
+        hasStoredCredentials: !!(userFromDb?.gmailUsername && userFromDb?.gmailAppPassword)
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to check email configuration status' });
@@ -751,17 +700,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/dashboard/stats', async (req, res) => {
+  app.get('/api/dashboard/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      // Get current user ID from demo user
-      const currentUser = await storage.getUserByUsername('demo_user');
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Demo user not found' });
-      }
-
-      const products = await storage.getProductsByUserId(currentUser.id);
-      const suppliers = await storage.getSuppliersByUserId(currentUser.id);
-      const alerts = await storage.getAlertsByUserId(currentUser.id);
+      const products = await storage.getProductsByUserId(req.userId!);
+      const suppliers = await storage.getSuppliersByUserId(req.userId!);
+      const alerts = await storage.getAlertsByUserId(req.userId!);
 
       const lowStockItems = products.filter(p => p.currentStock <= p.minimumQuantity && p.currentStock > 0);
       const outOfStockItems = products.filter(p => p.currentStock === 0);
@@ -805,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get column mapping suggestions for manual review
-  app.post('/api/stock-reports/analyze', upload.single('file'), async (req, res) => {
+  app.post('/api/stock-reports/analyze', requireAuth, upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
