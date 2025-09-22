@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Upload, BookOpen } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductTable from "@/components/ProductTable";
