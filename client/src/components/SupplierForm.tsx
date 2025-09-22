@@ -65,8 +65,9 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
                 placeholder="e.g., TechCorp Solutions"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="pl-10"
+                className="pl-10 min-h-[44px]"
                 data-testid="input-supplier-name"
+                autoComplete="organization"
                 required
               />
             </div>
@@ -79,20 +80,22 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
               <Input
                 id="email"
                 type="email"
+                inputMode="email"
                 placeholder="orders@techcorp.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="pl-10"
+                className="pl-10 min-h-[44px]"
                 data-testid="input-supplier-email"
+                autoComplete="email"
                 required
               />
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 pt-6 sticky bottom-0 bg-background p-4 -m-4 border-t mt-6">
             <Button 
               type="submit" 
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
               data-testid="button-save-supplier"
             >
               {supplier ? 'Update Supplier' : 'Add Supplier'}
@@ -101,6 +104,7 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
               type="button" 
               variant="outline" 
               onClick={handleCancel}
+              className="min-h-[44px]"
               data-testid="button-cancel-supplier"
             >
               Cancel

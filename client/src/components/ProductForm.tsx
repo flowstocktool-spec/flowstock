@@ -79,8 +79,9 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 placeholder="e.g., Wireless Headphones"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="pl-10"
+                className="pl-10 min-h-[44px]"
                 data-testid="input-product-name"
+                autoComplete="off"
                 required
               />
             </div>
@@ -95,23 +96,25 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 placeholder="e.g., WH-001"
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                className="pl-10 font-mono"
+                className="pl-10 font-mono min-h-[44px]"
                 data-testid="input-product-sku"
+                autoComplete="off"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="currentStock">Current Stock</Label>
               <Input
                 id="currentStock"
                 type="number"
+                inputMode="numeric"
                 min="0"
                 value={formData.currentStock}
                 onChange={(e) => setFormData({ ...formData, currentStock: parseInt(e.target.value) || 0 })}
-                className="font-mono"
+                className="font-mono min-h-[44px]"
                 data-testid="input-current-stock"
                 required
               />
@@ -124,10 +127,11 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
                 <Input
                   id="minimumQuantity"
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   value={formData.minimumQuantity}
                   onChange={(e) => setFormData({ ...formData, minimumQuantity: parseInt(e.target.value) || 1 })}
-                  className="pl-10 font-mono"
+                  className="pl-10 font-mono min-h-[44px]"
                   data-testid="input-minimum-quantity"
                   required
                 />
@@ -142,7 +146,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
               onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
               required
             >
-              <SelectTrigger data-testid="select-supplier">
+              <SelectTrigger data-testid="select-supplier" className="min-h-[44px]">
                 <SelectValue placeholder="Select a supplier" />
               </SelectTrigger>
               <SelectContent>
@@ -155,10 +159,10 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
             </Select>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 pt-6 sticky bottom-0 bg-background p-4 -m-4 border-t mt-6">
             <Button 
               type="submit" 
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
               data-testid="button-save-product"
             >
               {product ? 'Update Product' : 'Add Product'}
@@ -167,6 +171,7 @@ export default function ProductForm({ product, onSubmit, onCancel }: ProductForm
               type="button" 
               variant="outline" 
               onClick={handleCancel}
+              className="min-h-[44px]"
               data-testid="button-cancel-product"
             >
               Cancel

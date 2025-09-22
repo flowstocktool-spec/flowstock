@@ -99,6 +99,7 @@ export default function LoginPage() {
                           placeholder="Enter username or email"
                           data-testid="input-username-email"
                           autoComplete="username"
+                          className="min-h-[44px]"
                         />
                       </FormControl>
                       <FormMessage />
@@ -120,6 +121,7 @@ export default function LoginPage() {
                             placeholder="Enter your password"
                             data-testid="input-password"
                             autoComplete="current-password"
+                            className="min-h-[44px] pr-12"
                           />
                           <Button
                             type="button"
