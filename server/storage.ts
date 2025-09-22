@@ -18,6 +18,12 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: string): Promise<User | null>;
+  
+  // Authentication methods
+  getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null>;
+  setPasswordResetToken(userId: string, token: string, expires: Date): Promise<boolean>;
+  getUserByResetToken(token: string): Promise<User | null>;
+  clearPasswordResetToken(userId: string): Promise<boolean>;
 
   // Supplier methods
   getSupplier(id: string): Promise<Supplier | undefined>;
@@ -101,6 +107,68 @@ class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error fetching user by ID:', error);
       return null;
+    }
+  }
+
+  // Authentication methods
+  async getUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
+    try {
+      const result = await this.db.select().from(users)
+        .where(
+          sql`username = ${usernameOrEmail} OR email = ${usernameOrEmail}`
+        ).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error fetching user by username or email:', error);
+      return null;
+    }
+  }
+
+  async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({ 
+          resetPasswordToken: token, 
+          resetPasswordExpires: expires 
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error setting password reset token:', error);
+      return false;
+    }
+  }
+
+  async getUserByResetToken(token: string): Promise<User | null> {
+    try {
+      const result = await this.db.select().from(users)
+        .where(
+          and(
+            eq(users.resetPasswordToken, token),
+            sql`reset_password_expires > NOW()`
+          )
+        ).limit(1);
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error fetching user by reset token:', error);
+      return null;
+    }
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({ 
+          resetPasswordToken: null, 
+          resetPasswordExpires: null 
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error clearing password reset token:', error);
+      return false;
     }
   }
 

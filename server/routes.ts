@@ -11,7 +11,12 @@ import {
   insertSupplierSchema,
   insertProductSchema,
   insertStockReportSchema,
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "@shared/schema";
+import { authService, type AuthenticatedRequest } from "./auth";
 
 // Configure multer for file uploads with enhanced format support
 const upload = multer({
@@ -80,6 +85,105 @@ async function sendAutomaticStockAlert(product: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const data = registerSchema.parse(req.body);
+      const result = await authService.register(data);
+      
+      if (result.success && result.user) {
+        req.session.userId = result.user.id;
+        const { password, ...userWithoutPassword } = result.user;
+        res.json({ success: true, user: userWithoutPassword });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(400).json({ success: false, error: 'Invalid registration data' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const credentials = loginSchema.parse(req.body);
+      const result = await authService.login(credentials);
+      
+      if (result.success && result.user) {
+        req.session.userId = result.user.id;
+        const { password, ...userWithoutPassword } = result.user;
+        res.json({ success: true, user: userWithoutPassword });
+      } else {
+        res.status(401).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(400).json({ success: false, error: 'Invalid login data' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ success: false, error: 'Failed to logout' });
+      } else {
+        res.clearCookie('connect.sid');
+        res.json({ success: true });
+      }
+    });
+  });
+
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      const result = await authService.requestPasswordReset(email);
+      
+      if (result.success) {
+        // In production, send email here. For MVP, we'll log the token
+        if (result.token) {
+          console.log(`Password reset token for ${email}: ${result.token}`);
+        }
+        res.json({ success: true, message: 'If the email exists, a reset link has been sent' });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(400).json({ success: false, error: 'Invalid email format' });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const data = resetPasswordSchema.parse(req.body);
+      const result = await authService.resetPassword(data.token, data.password);
+      
+      if (result.success) {
+        res.json({ success: true, message: 'Password reset successfully' });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(400).json({ success: false, error: 'Invalid reset data' });
+    }
+  });
+
+  app.get('/api/auth/me', async (req: AuthenticatedRequest, res) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch user' });
+    }
+  });
+
   // User routes
   app.post('/api/users', async (req, res) => {
     try {
