@@ -254,9 +254,7 @@ export class IntelligentStockParser {
 
       stream
         .pipe(csv({
-          separator: delimiter,
-          skipEmptyLines: true,
-          headers: true
+          separator: delimiter
         }))
         .on('data', (data) => results.push(data))
         .on('end', () => resolve(results))
@@ -399,7 +397,7 @@ export class IntelligentStockParser {
       for (const header of headers) {
         const normalizedHeader = header.toLowerCase().trim();
 
-        for (const name of possibleNames) {
+        for (const name: string of possibleNames) {
           if (normalizedHeader.includes(name.toLowerCase()) ||
               name.toLowerCase().includes(normalizedHeader)) {
             matches.push(header);

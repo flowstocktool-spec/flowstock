@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { emailService } from "./email";
 import { parseStockReport } from "./stockParser";
 import { intelligentParser } from "./intelligentParser";
+import { universalParser } from "./universalParser";
 import {
   insertUserSchema,
   insertSupplierSchema,
@@ -12,16 +13,16 @@ import {
   insertStockReportSchema,
 } from "@shared/schema";
 
-// Configure multer for file uploads
+// Configure multer for file uploads with enhanced format support
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['.csv', '.xlsx', '.xls'];
+    const allowedTypes = ['.csv', '.xlsx', '.xls', '.tsv', '.txt', '.json', '.xml', '.dat', '.tab'];
     const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
     cb(null, allowedTypes.includes(ext));
   },
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 25 * 1024 * 1024, // 25MB limit for enhanced formats
   },
 });
 
@@ -292,9 +293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const report = await storage.createStockReport(reportData);
 
-      // Parse the file using intelligent parser
+      // Parse the file using universal parser for enhanced format support
       console.log(`📁 Processing file: ${req.file.originalname} (${req.file.size} bytes)`);
-      const parseResult = await intelligentParser.parseFile(req.file.buffer, req.file.originalname);
+      const parseResult = await universalParser.parseFile(req.file.buffer, req.file.originalname);
 
       if (!parseResult.success) {
         return res.status(400).json({
@@ -304,11 +305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Intelligent parsing successful:`);
+      console.log(`✅ Universal parsing successful:`);
       console.log(`   Platform: ${parseResult.metadata.detectedPlatform} (${Math.round(parseResult.metadata.confidence * 100)}% confidence)`);
       console.log(`   Format: ${parseResult.metadata.fileFormat}`);
-      console.log(`   Rows: ${parseResult.metadata.validRows}/${parseResult.metadata.totalRows} valid`);
+      console.log(`   Encoding: ${parseResult.metadata.encoding}`);
+      console.log(`   Rows: ${parseResult.metadata.validRows}/${parseResult.metadata.totalRows} valid (${parseResult.metadata.skippedRows} skipped)`);
       console.log(`   Columns: ${Object.keys(parseResult.metadata.detectedColumns).join(', ')}`);
+      if (parseResult.warnings.length > 0) {
+        console.log(`   Warnings: ${parseResult.warnings.length}`);
+      }
 
       // Update product stock levels and send alerts
       let alertsGenerated = 0;
