@@ -321,63 +321,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let productsCreated = 0;
       let productsUpdated = 0;
 
-      // Use batch update for much better performance
-      const updates = parseResult.data.map(row => ({
-        sku: row.sku,
-        stock: row.currentStock,
-        name: row.name
-      }));
-
-      const updatedCount = await storage.batchUpdateProductStock(userId, updates);
+      // Process each product individually for reliable updates
+      let updatedCount = 0;
 
       for (const stockData of parseResult.data) {
-        // Find products by SKU
-        const products = await storage.getProductsBySku(stockData.sku);
-        const userProducts = products.filter(p => p.userId === userId);
-
-        for (const product of userProducts) {
-          try {
-            // Update the product with new stock level
-            const updatedProduct = await storage.updateProduct(product.id, {
-              currentStock: stockData.currentStock
+        try {
+          // First, try to find existing product by SKU
+          const existingProduct = await storage.getProductBySku(userId, stockData.sku);
+          
+          if (existingProduct) {
+            // Update existing product
+            const updatedProduct = await storage.updateProduct(existingProduct.id, {
+              currentStock: stockData.currentStock,
+              name: stockData.name || existingProduct.name
             });
-
+            
             if (updatedProduct) {
+              updatedCount++;
+              productsUpdated++;
               // Send automatic alert if needed
-              const isLowStock = stockData.currentStock <= product.minimumQuantity;
-              const isOutOfStock = stockData.currentStock === 0;
-
-              if (isLowStock || isOutOfStock) {
-                const supplier = await storage.getSupplier(product.supplierId);
-                const user = await storage.getUser(userId);
-
-                if (supplier && user && supplier.email && user.senderEmail && emailService.isEmailConfigured()) {
-                  console.log(`📧 CSV Upload: Sending ${isOutOfStock ? 'OUT OF STOCK' : 'LOW STOCK'} alert for ${product.name}`);
-
-                  const emailSent = await emailService.sendLowStockAlert(
-                    product.name,
-                    product.sku,
-                    stockData.currentStock,
-                    product.minimumQuantity,
-                    supplier.email,
-                    user.senderEmail
-                  );
-
-                  if (emailSent) {
-                    await storage.createAlert(product.id, supplier.id, userId);
-                    alertsGenerated++;
-                    console.log(`✅ CSV Alert sent: ${product.name} to ${supplier.email}`);
-                  } else {
-                    alertErrors.push(`Failed to send alert for ${product.name}`);
-                  }
-                } else {
-                  alertErrors.push(`Cannot send alert for ${product.name} - missing email configuration`);
-                }
-              }
+              await sendAutomaticStockAlert(updatedProduct);
             }
-          } catch (error) {
-            alertErrors.push(`Error processing alert for ${product.name}: ${error}`);
+          } else {
+            // Create new product if not found
+            const suppliers = await storage.getSuppliersByUserId(userId);
+            const defaultSupplier = suppliers[0]; // Use first available supplier
+            
+            if (defaultSupplier) {
+              const newProduct = await storage.createProduct({
+                sku: stockData.sku,
+                name: stockData.name || stockData.sku,
+                currentStock: stockData.currentStock,
+                minimumQuantity: 10,
+                supplierId: defaultSupplier.id,
+                userId
+              });
+              
+              if (newProduct) {
+                updatedCount++;
+                productsCreated++;
+                await sendAutomaticStockAlert(newProduct);
+              }
+            } else {
+              alertErrors.push(`Cannot create product ${stockData.sku}: No suppliers found for user`);
+            }
           }
+        } catch (error) {
+          alertErrors.push(`Error processing ${stockData.sku}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
