@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Mail, Edit, Trash2 } from "lucide-react";
+import { Plus, Mail, Edit, Trash2, BookOpen } from "lucide-react";
 import SupplierForm from "@/components/SupplierForm";
 
 interface Supplier {
@@ -114,15 +114,49 @@ export default function SuppliersPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="heading-suppliers">Suppliers</h1>
-          <p className="text-muted-foreground">Manage your supplier contacts and relationships</p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="heading-suppliers">Suppliers</h1>
+            <p className="text-muted-foreground">Manage your supplier contacts and relationships</p>
+          </div>
+          <Button onClick={handleAddSupplier} data-testid="button-add-supplier-page">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Supplier
+          </Button>
         </div>
-        <Button onClick={handleAddSupplier} data-testid="button-add-supplier-page">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Supplier
-        </Button>
+
+        {/* Suppliers User Guide */}
+        <Card className="bg-purple-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <BookOpen className="h-5 w-5" />
+              Supplier Management Guide
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-purple-700 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold">Adding Suppliers:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Name:</strong> Use company name or primary contact</li>
+                  <li><strong>Email:</strong> Enter the order/purchasing email</li>
+                  <li><strong>Verify Email:</strong> Double-check for typos before saving</li>
+                  <li><strong>Test Contact:</strong> Use mail icon to verify email works</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold">Best Practices:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>One per Company:</strong> Don't duplicate suppliers</li>
+                  <li><strong>Update Regularly:</strong> Keep contact info current</li>
+                  <li><strong>Professional Emails:</strong> Use business, not personal emails</li>
+                  <li><strong>Product Count:</strong> Shows how many products assigned</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {showForm ? (

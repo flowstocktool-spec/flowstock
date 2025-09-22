@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Clock, CheckCircle } from "lucide-react";
+import { Mail, Clock, CheckCircle, BookOpen } from "lucide-react";
 
 // Mock data - todo: remove mock functionality
 const recentAlerts = [
@@ -46,6 +46,38 @@ export default function AlertsPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold" data-testid="heading-alerts">Alerts</h1>
         <p className="text-muted-foreground">Track notifications sent to suppliers</p>
+
+        {/* Alerts User Guide */}
+        <Card className="mt-4 bg-orange-50 border-orange-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <BookOpen className="h-5 w-5" />
+              Understanding Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-orange-700 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold">Automatic Triggers:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Low Stock:</strong> When stock hits minimum quantity</li>
+                  <li><strong>Out of Stock:</strong> When inventory reaches zero</li>
+                  <li><strong>Upload Processing:</strong> During CSV file imports</li>
+                  <li><strong>Real-time:</strong> Sent immediately when triggered</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold">Monitoring Tips:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Daily Check:</strong> Review "Today" count each morning</li>
+                  <li><strong>Follow Up:</strong> Contact suppliers who receive multiple alerts</li>
+                  <li><strong>Adjust Thresholds:</strong> Modify minimum quantities if too many alerts</li>
+                  <li><strong>Email Setup:</strong> Ensure Settings → Email is configured</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Alert Statistics */}

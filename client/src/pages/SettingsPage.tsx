@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, User, Key, Save, TestTube, CheckCircle, AlertTriangle } from "lucide-react";
+import { Mail, User, Key, Save, TestTube, CheckCircle, AlertTriangle, BookOpen } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -208,6 +208,37 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold" data-testid="heading-settings">Settings</h1>
         <p className="text-muted-foreground">Manage your account and application preferences</p>
       </div>
+
+      {/* Settings User Guide */}
+      <Card className="mb-6 bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <BookOpen className="h-5 w-5" />
+            How to Use Settings Effectively
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-blue-700 space-y-3">
+          <div>
+            <h4 className="font-semibold">Essential Setup Steps:</h4>
+            <ol className="list-decimal pl-6 space-y-1 text-sm">
+              <li><strong>Configure Email First:</strong> Set up Gmail SMTP to enable automatic alerts</li>
+              <li><strong>Enable 2FA on Gmail:</strong> Required for App Password generation</li>
+              <li><strong>Generate App Password:</strong> Google Account → Security → 2-Step Verification → App passwords</li>
+              <li><strong>Set Sender Email:</strong> Use a professional email address for supplier communications</li>
+              <li><strong>Test Configuration:</strong> Always send a test email to verify setup</li>
+            </ol>
+          </div>
+          <div>
+            <h4 className="font-semibold">Security Best Practices:</h4>
+            <ul className="list-disc pl-6 space-y-1 text-sm">
+              <li>Use strong, unique passwords</li>
+              <li>Never share App Passwords</li>
+              <li>Regularly update your credentials</li>
+              <li>Monitor alert activity for unauthorized access</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="space-y-6 max-w-2xl">
         {feedback.type && (

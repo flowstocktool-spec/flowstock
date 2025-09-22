@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, BookOpen } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ProductTable from "@/components/ProductTable";
 import ProductForm from "@/components/ProductForm";
@@ -142,7 +142,58 @@ export default function ProductsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="heading-products">Products</h1>
+            <p className="text-muted-foreground">Manage your product catalog and stock levels</p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={handleUploadStock} variant="outline" data-testid="button-upload-stock">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Stock Report
+            </Button>
+            <Button onClick={handleAddProduct} data-testid="button-add-product-page">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </div>
+        </div>
+
+        {/* Products User Guide */}
+        <Card className="bg-green-50 border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <BookOpen className="h-5 w-5" />
+              Product Management Guide
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-green-700 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold">Adding Products:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Manual:</strong> Click "Add Product" for individual items</li>
+                  <li><strong>Bulk Upload:</strong> Use "Upload Stock Report" for CSV/Excel files</li>
+                  <li><strong>SKU:</strong> Use unique identifiers (e.g., "TSHIRT-001")</li>
+                  <li><strong>Minimum Quantity:</strong> Set realistic reorder thresholds</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold">Managing Stock:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Green Badge:</strong> Stock is above minimum</li>
+                  <li><strong>Orange Badge:</strong> Low stock - reorder soon</li>
+                  <li><strong>Red Badge:</strong> Out of stock - urgent action needed</li>
+                  <li><strong>Edit anytime:</strong> Click pencil icon to update details</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mb-6 flex items-center justify-between" style={{ display: 'none' }}>
         <div>
           <h1 className="text-3xl font-bold" data-testid="heading-products">Products</h1>
           <p className="text-muted-foreground">Manage your product catalog and stock levels</p>

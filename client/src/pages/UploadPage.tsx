@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Calendar, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
+import { FileText, Calendar, CheckCircle, AlertCircle, TrendingUp, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -61,6 +61,41 @@ export default function UploadPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold" data-testid="heading-upload">Stock Reports</h1>
         <p className="text-muted-foreground">View upload history and processing results</p>
+
+        {/* Upload User Guide */}
+        <Card className="mt-4 bg-indigo-50 border-indigo-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-indigo-800">
+              <BookOpen className="h-5 w-5" />
+              Stock Upload Guide
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-indigo-700 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold">File Requirements:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Formats:</strong> CSV, Excel (.xlsx), TSV supported</li>
+                  <li><strong>Required Columns:</strong> SKU/Handle and Stock/Quantity</li>
+                  <li><strong>Optional:</strong> Product Name, Price for better matching</li>
+                  <li><strong>Platform Detection:</strong> Auto-detects Amazon, Shopify, eBay, etc.</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold">Understanding Results:</h4>
+                <ul className="list-disc pl-6 space-y-1 text-sm">
+                  <li><strong>Records Processed:</strong> Successfully read from file</li>
+                  <li><strong>Products Created:</strong> New items added to catalog</li>
+                  <li><strong>Products Updated:</strong> Existing stock levels refreshed</li>
+                  <li><strong>Alerts Generated:</strong> Automatic notifications sent</li>
+                </ul>
+              </div>
+            </div>
+            <div className="bg-indigo-100 p-3 rounded-lg mt-3">
+              <p className="text-sm font-medium">💡 Pro Tip: Upload files regularly (daily/weekly) to keep stock levels current and ensure timely supplier alerts.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Upload Stats */}
